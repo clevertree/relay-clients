@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { styleManager, unifiedBridge } from '@clevertree/relay-client-shared'
 import { useTranspilerSetting } from '../state/transpilerSettings'
+import { TSDiv } from './TSDiv'
 
 export function SettingsTab() {
   const { setting, setSetting } = useTranspilerSetting()
@@ -36,7 +37,7 @@ export function SettingsTab() {
             .forEach((c) => set.add(c))
         }
       })
-    } catch {}
+    } catch { }
     return Array.from(set).sort()
   }
 
@@ -73,7 +74,7 @@ export function SettingsTab() {
 
   useEffect(() => {
     refreshStylerStatus()
-    const unsub = styleManager.onChange ? styleManager.onChange(refreshStylerStatus) : () => {}
+    const unsub = styleManager.onChange ? styleManager.onChange(refreshStylerStatus) : () => { }
     return () => unsub()
   }, [refreshStylerStatus])
 
@@ -86,48 +87,48 @@ export function SettingsTab() {
   const isServer = setting === 'server-only'
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Relay settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Control how hooks are transpiled.</p>
-      </div>
+    <TSDiv className="flex-1 overflow-y-auto p-6 space-y-6">
+      <TSDiv>
+        <TSDiv tag="h1" className="text-2xl font-semibold text-gray-900">Relay settings</TSDiv>
+        <TSDiv tag="p" className="text-sm text-gray-500 mt-1">Control how hooks are transpiled.</TSDiv>
+      </TSDiv>
 
-      <section className="bg-[var(--bg-surface)] border rounded-lg shadow-sm p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Transpiler</h2>
-            <p className="text-sm text-gray-500">Choose between client-side (WASM) and server-side transpilation.</p>
-          </div>
-        </div>
+      <TSDiv tag="section" className="bg-[var(--bg-surface)] border rounded-lg shadow-sm p-6 space-y-4">
+        <TSDiv className="flex items-center justify-between">
+          <TSDiv>
+            <TSDiv tag="h2" className="text-lg font-semibold text-gray-900">Transpiler</TSDiv>
+            <TSDiv tag="p" className="text-sm text-gray-500">Choose between client-side (WASM) and server-side transpilation.</TSDiv>
+          </TSDiv>
+        </TSDiv>
 
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div>
-            <p className="text-base font-medium text-gray-900">{isServer ? 'Server-side transpiler' : 'Client-side hook transpiler'}</p>
-            <p className="text-sm text-gray-500 mt-1">{selectedDescription}</p>
-          </div>
-          <label className="inline-flex items-center cursor-pointer select-none">
-            <span className="mr-3 text-sm text-gray-600">Client</span>
+        <TSDiv className="flex items-center justify-between rounded-lg border p-4">
+          <TSDiv>
+            <TSDiv tag="p" className="text-base font-medium text-gray-900">{isServer ? 'Server-side transpiler' : 'Client-side hook transpiler'}</TSDiv>
+            <TSDiv tag="p" className="text-sm text-gray-500 mt-1">{selectedDescription}</TSDiv>
+          </TSDiv>
+          <TSDiv tag="label" className="inline-flex items-center cursor-pointer select-none">
+            <TSDiv tag="span" className="mr-3 text-sm text-gray-600">Client</TSDiv>
             <input
               type="checkbox"
               className="sr-only peer"
               checked={isServer}
               onChange={(e) => setSetting(e.target.checked ? 'server-only' : 'client-only')}
             />
-            <div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600 transition-colors relative">
-              <div className="absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-6" />
-            </div>
-            <span className="ml-3 text-sm text-gray-600">Server</span>
-          </label>
-        </div>
-      </section>
+            <TSDiv className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600 transition-colors relative">
+              <TSDiv className="absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-6" />
+            </TSDiv>
+            <TSDiv tag="span" className="ml-3 text-sm text-gray-600">Server</TSDiv>
+          </TSDiv>
+        </TSDiv>
+      </TSDiv>
 
-      <section className="bg-[var(--bg-surface)] border rounded-lg shadow-sm p-6 space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Active classes</h2>
-            <p className="text-sm text-gray-500">Currently applied classes in the UI. Total: {classes.length}</p>
-          </div>
-          <div className="flex items-center gap-2">
+      <TSDiv tag="section" className="bg-[var(--bg-surface)] border rounded-lg shadow-sm p-6 space-y-4">
+        <TSDiv className="flex items-center justify-between gap-4">
+          <TSDiv>
+            <TSDiv tag="h2" className="text-lg font-semibold text-gray-900">Active classes</TSDiv>
+            <TSDiv tag="p" className="text-sm text-gray-500">Currently applied classes in the UI. Total: {classes.length}</TSDiv>
+          </TSDiv>
+          <TSDiv className="flex items-center gap-2">
             <input
               type="text"
               placeholder="Search classes..."
@@ -135,35 +136,37 @@ export function SettingsTab() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button
+            <TSDiv
+              tag="button"
               type="button"
               onClick={refreshClasses}
               className="px-3 py-2 text-sm border rounded-lg"
             >
               Refresh
-            </button>
-          </div>
-        </div>
-        <div className="max-h-64 overflow-auto border rounded-md">
-          <ul className="divide-y divide-[var(--border)]">
+            </TSDiv>
+          </TSDiv>
+        </TSDiv>
+        <TSDiv className="max-h-64 overflow-auto border rounded-md">
+          <TSDiv tag="ul" className="divide-y divide-[var(--border)]">
             {filtered.map((c) => (
-              <li key={c} className="px-3 py-2 font-mono text-xs text-[var(--text)]">{c}</li>
+              <TSDiv tag="li" key={c} className="px-3 py-2 font-mono text-xs text-[var(--text)]">{c}</TSDiv>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-500">No classes match your search.</li>
+              <TSDiv tag="li" className="px-3 py-2 text-sm text-gray-500">No classes match your search.</TSDiv>
             )}
-          </ul>
-        </div>
-        <div className="text-xs text-gray-500">Showing {filtered.length} of {classes.length}</div>
-      </section>
+          </TSDiv>
+        </TSDiv>
+        <TSDiv className="text-xs text-gray-500">Showing {filtered.length} of {classes.length}</TSDiv>
+      </TSDiv>
 
-      <section className="bg-[var(--bg-surface)] border rounded-lg shadow-sm p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Themed Styler status</h2>
-            <p className="text-sm text-gray-500">Runtime injector visibility and registered classes.</p>
-          </div>
-          <button
+      <TSDiv tag="section" className="bg-[var(--bg-surface)] border rounded-lg shadow-sm p-6 space-y-4">
+        <TSDiv className="flex items-center justify-between">
+          <TSDiv>
+            <TSDiv tag="h2" className="text-lg font-semibold text-gray-900">Themed Styler status</TSDiv>
+            <TSDiv tag="p" className="text-sm text-gray-500">Runtime injector visibility and registered classes.</TSDiv>
+          </TSDiv>
+          <TSDiv
+            tag="button"
             type="button"
             onClick={() => {
               styleManager.requestRender()
@@ -172,27 +175,27 @@ export function SettingsTab() {
             className="px-3 py-2 text-sm border dark:rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             Ensure CSS
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2 text-sm text-gray-600">
-            <div className="flex items-center justify-between text-base font-medium text-gray-900">
+          </TSDiv>
+        </TSDiv>
+        <TSDiv className="grid grid-cols-2 gap-4">
+          <TSDiv className="space-y-2 text-sm text-gray-600">
+            <TSDiv className="flex items-center justify-between text-base font-medium text-gray-900">
               Style tag
-              <span className={stylerStatus.styleTag ? 'text-green-600' : 'text-red-500'}>
+              <TSDiv tag="span" className={stylerStatus.styleTag ? 'text-green-600' : 'text-red-500'}>
                 {stylerStatus.styleTag ? 'injected' : 'missing'}
-              </span>
-            </div>
-            <div className="text-xs text-gray-500">
+              </TSDiv>
+            </TSDiv>
+            <TSDiv className="text-xs text-gray-500">
               {stylerStatus.selectors} selectors · {stylerStatus.classes} classes registered
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-mono text-[var(--text-code)] bg-[var(--bg-code)] rounded p-2 overflow-auto max-h-40">
+            </TSDiv>
+          </TSDiv>
+          <TSDiv>
+            <TSDiv tag="div" className="text-xs font-mono text-[var(--text-code)] bg-[var(--bg-code)] rounded p-2 overflow-auto max-h-40">
               {stylerStatus.cssPreview || 'No CSS generated yet.'}
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+            </TSDiv>
+          </TSDiv>
+        </TSDiv>
+      </TSDiv>
+    </TSDiv>
   )
 }

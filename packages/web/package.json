@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:debug": "VITE_NODE_ENV=development VITE_SOURCEMAP=true vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve:relay": "npm run build && /home/ari/dev/relay-server/target/release/relay-server --repo-root /home/ari/dev/relay-server --static-paths $PWD/dist --port 8080"
   },
   "dependencies": {
     "@babel/standalone": "^7.26.2",

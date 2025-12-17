@@ -1,9 +1,10 @@
-import React, {useEffect, useMemo, useState} from 'react'
-import {useAppState} from '../state/store'
-import {RepoFetchProvider} from '../context/RepoFetchContext'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useAppState } from '../state/store'
+import { RepoFetchProvider } from '../context/RepoFetchContext'
 import HookRenderer from './HookRenderer'
 import StyleDebugPanel from './StyleDebugPanel'
 import ErrorBoundary from './ErrorBoundary'
+import { TSDiv } from './TSDiv'
 
 interface RepoBrowserProps {
     tabId: string
@@ -36,7 +37,7 @@ function normalizeHostUrl(host: string): string {
     return `https://${host}` // No port, assume https
 }
 
-export function RepoBrowser({tabId}: RepoBrowserProps) {
+export function RepoBrowser({ tabId }: RepoBrowserProps) {
     const tab = useAppState((s) => s.tabs.find((t) => t.id === tabId))
     const updateTab = useAppState((s) => s.updateTab)
     const [loading, setLoading] = useState(true)
@@ -72,7 +73,7 @@ export function RepoBrowser({tabId}: RepoBrowserProps) {
         setIsPulling(true)
         try {
             const baseUrl = normalizeHostUrl(tab.host)
-            const resp = await fetch(`${baseUrl}/git-pull`, {method: 'POST'})
+            const resp = await fetch(`${baseUrl}/git-pull`, { method: 'POST' })
             const result = await resp.json()
             setPullResult(result)
 
@@ -117,10 +118,10 @@ export function RepoBrowser({tabId}: RepoBrowserProps) {
         if (!tab || !tab.host) return null
         try {
             const baseUrl = normalizeHostUrl(tab.host)
-            const diagnostics: Record<string, any> = {phase: 'options', url: `${baseUrl}/`}
+            const diagnostics: Record<string, any> = { phase: 'options', url: `${baseUrl}/` }
 
             // Attempt OPTIONS discovery first
-            const resp = await fetch(`${baseUrl}/`, {method: 'OPTIONS'})
+            const resp = await fetch(`${baseUrl}/`, { method: 'OPTIONS' })
             diagnostics.options = {
                 status: resp.status,
                 ok: resp.ok,
@@ -156,8 +157,8 @@ export function RepoBrowser({tabId}: RepoBrowserProps) {
             // If OPTIONS returned a valid payload but contains no repositories, surface a clearer error
             if (Array.isArray(options.repos) && options.repos.length === 0) {
                 setError('Repository discovery did not return any repos. OPTIONS responded successfully but the repos list is empty. See details for diagnostics.')
-                setErrorDetails({phase: 'render', reason: 'no-repos', optionsInfo: options, diagnostics})
-                console.error('[RepoBrowser] No repos returned in OPTIONS payload:', {options, diagnostics})
+                setErrorDetails({ phase: 'render', reason: 'no-repos', optionsInfo: options, diagnostics })
+                console.error('[RepoBrowser] No repos returned in OPTIONS payload:', { options, diagnostics })
                 return null
             }
 
@@ -170,13 +171,13 @@ export function RepoBrowser({tabId}: RepoBrowserProps) {
                 reposList: options.repos?.map((r) => r.name),
             }))
             if (!options?.client?.hooks?.get?.path) {
-                console.error('[RepoBrowser] Discovery missing client hook paths', {options, diagnostics})
+                console.error('[RepoBrowser] Discovery missing client hook paths', { options, diagnostics })
             }
             return options
         } catch (err) {
             console.error('Failed to load options:', err)
             setError('Failed to load repository OPTIONS')
-            setErrorDetails({phase: 'options', reason: (err as any)?.message || String(err)})
+            setErrorDetails({ phase: 'options', reason: (err as any)?.message || String(err) })
             return null
         }
     }
@@ -192,7 +193,7 @@ export function RepoBrowser({tabId}: RepoBrowserProps) {
             const info = opts || optionsInfo
             if (!info || !info.client) {
                 setError('Repository discovery did not return client hooks. OPTIONS may be blocked or empty; attempted GET fallback. See details for diagnostics.')
-                setErrorDetails({phase: 'render', reason: 'no-options', optionsInfo})
+                setErrorDetails({ phase: 'render', reason: 'no-options', optionsInfo })
                 return
             }
 
@@ -248,7 +249,7 @@ export function RepoBrowser({tabId}: RepoBrowserProps) {
         const mkErr = (message: string) => {
             const e: any = new Error(message)
             e.name = 'RepoFetchJsonError'
-            e.details = {url, status: resp.status, ok: resp.ok, contentType: ct, sample: text.slice(0, 256)}
+            e.details = { url, status: resp.status, ok: resp.ok, contentType: ct, sample: text.slice(0, 256) }
             return e
         }
         if (!resp.ok) throw mkErr(`HTTP ${resp.status} while fetching JSON: ${url}`)
@@ -272,335 +273,339 @@ export function RepoBrowser({tabId}: RepoBrowserProps) {
             fetch: providerFetch,
             fetchJson: providerFetchJson
         }}>
-            <div className="flex flex-col h-full">
+            <TSDiv className="flex flex-col h-full">
                 <ErrorBoundary>
-                    <div className="flex-1 overflow-y-auto">
+                    <TSDiv className="flex-1 overflow-y-auto">
 
-                    {/* Development-only style debug panel */}
-                    {import.meta.env?.DEV && (
-                        <div className="p-4">
-                            <StyleDebugPanel />
-                        </div>
-                    )}
+                        {/* Development-only style debug panel */}
+                        {import.meta.env?.DEV && (
+                            <TSDiv className="p-4">
+                                <StyleDebugPanel />
+                            </TSDiv>
+                        )}
 
                         {loading &&
-                            <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>}
+                            <TSDiv className="flex items-center justify-center h-full text-gray-500">Loading...</TSDiv>}
 
                         {error && (
-                            <div
+                            <TSDiv
                                 className="p-8 bg-[var(--bg-error)] border border-[var(--border-error)] rounded-lg text-[var(--text-error)]">
-                                <h3 className="mt-0">Error</h3>
-                                <p className="font-semibold">{error}</p>
+                                <TSDiv tag="h3" className="mt-0">Error</TSDiv>
+                                <TSDiv tag="p" className="font-semibold">{error}</TSDiv>
 
                                 {errorDetails && (
-                                    <div className="mt-4 space-y-3 text-sm">
+                                    <TSDiv className="mt-4 space-y-3 text-sm">
                                         {/* Show hook path and HTTP request info */}
                                         {errorDetails.kind && (
-                                            <div className="bg-red-600/10 p-3 rounded border/50">
-                                                <div className="font-mono text-xs space-y-1">
-                                                    <div><strong>Hook Type:</strong> {errorDetails.kind}</div>
+                                            <TSDiv className="bg-red-600/10 p-3 rounded border/50">
+                                                <TSDiv className="font-mono text-xs space-y-1">
+                                                    <TSDiv><TSDiv tag="strong">Hook Type:</TSDiv> {errorDetails.kind}</TSDiv>
                                                     {errorDetails.hookUrl && (
-                                                        <div className="break-all"><strong>GET URL:</strong> <code
-                                                            className="bg-black/20 px-1 py-0.5 rounded">{errorDetails.hookUrl}</code>
-                                                        </div>
+                                                        <TSDiv className="break-all"><TSDiv tag="strong">GET URL:</TSDiv> <TSDiv tag="code"
+                                                            className="bg-black/20 px-1 py-0.5 rounded">{errorDetails.hookUrl}</TSDiv>
+                                                        </TSDiv>
                                                     )}
                                                     {errorDetails.fetch && (
                                                         <>
-                                                            <div><strong>HTTP
-                                                                Status:</strong> {errorDetails.fetch.status} {errorDetails.fetch.ok ? '✓' : '✗'}
-                                                            </div>
-                                                            <div>
-                                                                <strong>Content-Type:</strong> {errorDetails.fetch.contentType || 'not specified'}
-                                                            </div>
+                                                            <TSDiv><TSDiv tag="strong">HTTP
+                                                                Status:</TSDiv> {errorDetails.fetch.status} {errorDetails.fetch.ok ? '✓' : '✗'}
+                                                            </TSDiv>
+                                                            <TSDiv>
+                                                                <TSDiv tag="strong">Content-Type:</TSDiv> {errorDetails.fetch.contentType || 'not specified'}
+                                                            </TSDiv>
                                                         </>
                                                     )}
                                                     {errorDetails.codeLength && (
-                                                        <div><strong>Code
-                                                            Length:</strong> {errorDetails.codeLength} bytes</div>
+                                                        <TSDiv><TSDiv tag="strong">Code
+                                                            Length:</TSDiv> {errorDetails.codeLength} bytes</TSDiv>
                                                     )}
-                                                </div>
-                                            </div>
+                                                </TSDiv>
+                                            </TSDiv>
                                         )}
 
                                         {/* Show JSX transpilation errors (from transpileCode failure) */}
                                         {(errorDetails.reason === 'transpile-failed' || errorDetails.jsxError) && (
-                                            <div className="bg-red-600/10 p-3 rounded border/50 space-y-2">
-                                                <div className="font-semibold text-xs">
+                                            <TSDiv className="bg-red-600/10 p-3 rounded border/50 space-y-2">
+                                                <TSDiv className="font-semibold text-xs">
                                                     {errorDetails.isWasmNotLoaded ? '🔌 WASM Transpiler Not Available' : '❌ JSX Transpilation Failed'}
-                                                </div>
+                                                </TSDiv>
 
                                                 {errorDetails.isWasmNotLoaded && (
-                                                    <div className="text-xs bg-red-900/20 border/30 rounded p-2 space-y-1">
-                                                        <p className="font-semibold">The JSX transpiler (WASM) is not available</p>
-                                                        <p>This usually means:</p>
-                                                        <ul className="list-disc list-inside ml-2 space-y-1">
-                                                            <li>The app didn't fully load when you started browsing</li>
-                                                            <li>Your browser blocked WASM module loading</li>
-                                                            <li>Network issue prevented transpiler from downloading</li>
-                                                        </ul>
-                                                        <p className="mt-2"><strong>Fix:</strong> Refresh the page and try again. Check browser console (F12) for errors.</p>
-                                                    </div>
+                                                    <TSDiv className="text-xs bg-red-900/20 border/30 rounded p-2 space-y-1">
+                                                        <TSDiv tag="p" className="font-semibold">The JSX transpiler (WASM) is not available</TSDiv>
+                                                        <TSDiv tag="p">This usually means:</TSDiv>
+                                                        <TSDiv tag="ul" className="list-disc list-inside ml-2 space-y-1">
+                                                            <TSDiv tag="li">The app didn't fully load when you started browsing</TSDiv>
+                                                            <TSDiv tag="li">Your browser blocked WASM module loading</TSDiv>
+                                                            <TSDiv tag="li">Network issue prevented transpiler from downloading</TSDiv>
+                                                        </TSDiv>
+                                                        <TSDiv tag="p" className="mt-2"><TSDiv tag="strong">Fix:</TSDiv> Refresh the page and try again. Check browser console (F12) for errors.</TSDiv>
+                                                    </TSDiv>
                                                 )}
 
                                                 {!errorDetails.isWasmNotLoaded && (
-                                                    <div className="text-xs bg-red-900/20 border/30 rounded p-2 space-y-1">
-                                                        <p className="font-semibold">Invalid JSX syntax detected</p>
-                                                        <p>The transpiler encountered syntax it couldn't convert. Check:</p>
-                                                        <ul className="list-disc list-inside ml-2 space-y-1">
-                                                            <li>All JSX tags are properly closed</li>
-                                                            <li>Attributes are correctly formatted</li>
-                                                            <li>No special characters in tag names</li>
-                                                        </ul>
-                                                    </div>
+                                                    <TSDiv className="text-xs bg-red-900/20 border/30 rounded p-2 space-y-1">
+                                                        <TSDiv tag="p" className="font-semibold">Invalid JSX syntax detected</TSDiv>
+                                                        <TSDiv tag="p">The transpiler encountered syntax it couldn't convert. Check:</TSDiv>
+                                                        <TSDiv tag="ul" className="list-disc list-inside ml-2 space-y-1">
+                                                            <TSDiv tag="li">All JSX tags are properly closed</TSDiv>
+                                                            <TSDiv tag="li">Attributes are correctly formatted</TSDiv>
+                                                            <TSDiv tag="li">No special characters in tag names</TSDiv>
+                                                        </TSDiv>
+                                                    </TSDiv>
                                                 )}
 
-                                                <div className="font-mono text-xs bg-black/20 p-2 rounded overflow-auto max-h-32 whitespace-pre-wrap">
+                                                <TSDiv className="font-mono text-xs bg-black/20 p-2 rounded overflow-auto max-h-32 whitespace-pre-wrap">
                                                     {typeof errorDetails.jsxError === 'string' ? errorDetails.jsxError : (errorDetails.jsxError?.message || JSON.stringify(errorDetails.jsxError, null, 2))}
-                                                </div>
-                                            </div>
+                                                </TSDiv>
+                                            </TSDiv>
                                         )}
 
                                         {/* Show execution errors */}
                                         {errorDetails.reason === 'execution-failed' && errorDetails.error && (
-                                            <div className={`p-3 rounded border ${errorDetails.isJsxSyntaxError ? 'bg-orange-600/10 border-orange-400/50' : 'bg-red-600/10/50'}`}>
-                                                <div className="font-semibold text-xs mb-3">
+                                            <TSDiv className={`p-3 rounded border ${errorDetails.isJsxSyntaxError ? 'bg-orange-600/10 border-orange-400/50' : 'bg-red-600/10/50'}`}>
+                                                <TSDiv className="font-semibold text-xs mb-3">
                                                     {errorDetails.isJsxSyntaxError ? '⚠️ JSX Transpilation Issue' : '❌ Execution Error'}
-                                                </div>
+                                                </TSDiv>
 
                                                 {/* For JSX syntax errors, provide detailed help */}
                                                 {errorDetails.isJsxSyntaxError && (
-                                                    <div className="space-y-2 mb-3">
-                                                        <div className="text-xs bg-orange-900/20 border border-orange-400/30 rounded p-2">
-                                                            <p className="font-semibold mb-2">What went wrong:</p>
-                                                            <p className="mb-2">The code contains JSX syntax (<code>&lt;</code> character), but it wasn't converted to regular JavaScript before execution.</p>
-                                                        </div>
-                                                        <div className="text-xs bg-blue-900/20 border border-blue-400/30 rounded p-2">
-                                                            <p className="font-semibold mb-2">Common causes:</p>
-                                                            <ul className="list-disc list-inside space-y-1">
-                                                                <li><strong>WASM transpiler failed to load:</strong> Check browser console for WASM errors</li>
-                                                                <li><strong>Invalid JSX syntax:</strong> Ensure JSX tags are properly closed (e.g., <code>&lt;div&gt;content&lt;/div&gt;</code>)</li>
-                                                                <li><strong>Missing React import:</strong> Add <code>const h = React.createElement</code> or equivalent</li>
-                                                                <li><strong>Wrong file type:</strong> Use .jsx or .tsx extension, or add <code>// @use-jsx</code> comment at the top</li>
-                                                            </ul>
-                                                        </div>
-                                                        <div className="text-xs bg-green-900/20 border rounded p-2">
-                                                            <p className="font-semibold mb-2">How to fix:</p>
-                                                            <ul className="list-disc list-inside space-y-1">
-                                                                <li>Verify the hook file has .jsx or .tsx extension</li>
-                                                                <li>Check the browser's developer console (F12) for detailed transpiler errors</li>
-                                                                <li>Ensure JSX is properly formatted: <code>&lt;ComponentName prop="value"&gt;</code></li>
-                                                                <li>For debugging, try uploading a simple JSX file first: <code>&lt;div&gt;Hello&lt;/div&gt;</code></li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
+                                                    <TSDiv className="space-y-2 mb-3">
+                                                        <TSDiv className="text-xs bg-orange-900/20 border border-orange-400/30 rounded p-2">
+                                                            <TSDiv tag="p" className="font-semibold mb-2">What went wrong:</TSDiv>
+                                                            <TSDiv tag="p" className="mb-2">The code contains JSX syntax (<TSDiv tag="code">&lt;</TSDiv> character), but it wasn't converted to regular JavaScript before execution.</TSDiv>
+                                                        </TSDiv>
+                                                        <TSDiv className="text-xs bg-blue-900/20 border border-blue-400/30 rounded p-2">
+                                                            <TSDiv tag="p" className="font-semibold mb-2">Common causes:</TSDiv>
+                                                            <TSDiv tag="ul" className="list-disc list-inside space-y-1">
+                                                                <TSDiv tag="li"><TSDiv tag="strong">WASM transpiler failed to load:</TSDiv> Check browser console for WASM errors</TSDiv>
+                                                                <TSDiv tag="li"><TSDiv tag="strong">Invalid JSX syntax:</TSDiv> Ensure JSX tags are properly closed (e.g., <TSDiv tag="code">&lt;div&gt;content&lt;/div&gt;</TSDiv>)</TSDiv>
+                                                                <TSDiv tag="li"><TSDiv tag="strong">Missing React import:</TSDiv> Add <TSDiv tag="code">const h = React.createElement</TSDiv> or equivalent</TSDiv>
+                                                                <TSDiv tag="li"><TSDiv tag="strong">Wrong file type:</TSDiv> Use .jsx or .tsx extension, or add <TSDiv tag="code">// @use-jsx</TSDiv> comment at the top</TSDiv>
+                                                            </TSDiv>
+                                                        </TSDiv>
+                                                        <TSDiv className="text-xs bg-green-900/20 border rounded p-2">
+                                                            <TSDiv tag="p" className="font-semibold mb-2">How to fix:</TSDiv>
+                                                            <TSDiv tag="ul" className="list-disc list-inside space-y-1">
+                                                                <TSDiv tag="li">Verify the hook file has .jsx or .tsx extension</TSDiv>
+                                                                <TSDiv tag="li">Check the browser's developer console (F12) for detailed transpiler errors</TSDiv>
+                                                                <TSDiv tag="li">Ensure JSX is properly formatted: <TSDiv tag="code">&lt;ComponentName prop="value"&gt;</TSDiv></TSDiv>
+                                                                <TSDiv tag="li">For debugging, try uploading a simple JSX file first: <TSDiv tag="code">&lt;div&gt;Hello&lt;/div&gt;</TSDiv></TSDiv>
+                                                            </TSDiv>
+                                                        </TSDiv>
+                                                    </TSDiv>
                                                 )}
 
-                                                <div className="font-mono text-xs mb-2">
-                                                    <strong>Error Message:</strong> {errorDetails.error}
-                                                </div>
+                                                <TSDiv className="font-mono text-xs mb-2">
+                                                    <TSDiv tag="strong">Error Message:</TSDiv> {errorDetails.error}
+                                                </TSDiv>
                                                 {errorDetails.diagnosticMsg && (
-                                                    <div className="font-mono text-xs mb-2 bg-black/20 p-2 rounded whitespace-pre-wrap">
-                                                        <strong>Diagnostic:</strong>
-                                                        <div className="mt-1">
+                                                    <TSDiv className="font-mono text-xs mb-2 bg-black/20 p-2 rounded whitespace-pre-wrap">
+                                                        <TSDiv tag="strong">Diagnostic:</TSDiv>
+                                                        <TSDiv className="mt-1">
                                                             {errorDetails.diagnosticMsg}
-                                                        </div>
-                                                    </div>
+                                                        </TSDiv>
+                                                    </TSDiv>
                                                 )}
                                                 {errorDetails.transpilerVersion && (
-                                                    <div className="font-mono text-xs mb-2 text-blue-100">
-                                                        <strong>Hook transpiler:</strong> v{errorDetails.transpilerVersion}
-                                                    </div>
+                                                    <TSDiv className="font-mono text-xs mb-2 text-blue-100">
+                                                        <TSDiv tag="strong">Hook transpiler:</TSDiv> v{errorDetails.transpilerVersion}
+                                                    </TSDiv>
                                                 )}
                                                 {errorDetails.transpilerDiagnostic && (
-                                                    <div className="font-mono text-xs bg-black/30 rounded p-2 mb-2 break-words">
-                                                        <strong>Transpiler error:</strong>
-                                                        <div className="mt-1 text-[11px] whitespace-pre-wrap">
+                                                    <TSDiv className="font-mono text-xs bg-black/30 rounded p-2 mb-2 break-words">
+                                                        <TSDiv tag="strong">Transpiler error:</TSDiv>
+                                                        <TSDiv className="mt-1 text-[11px] whitespace-pre-wrap">
                                                             {errorDetails.transpilerDiagnostic}
-                                                        </div>
-                                                    </div>
+                                                        </TSDiv>
+                                                    </TSDiv>
                                                 )}
                                                 {errorDetails.finalCodeSnippet && (
-                                                    <details className="text-xs bg-black/10 border border-black/20 rounded p-2 mb-2">
-                                                        <summary className="cursor-pointer">Transpiled preview (first 500 chars)</summary>
-                                                        <pre className="overflow-auto max-h-32 text-[11px] mt-1 whitespace-pre-wrap">{errorDetails.finalCodeSnippet}</pre>
-                                                    </details>
+                                                    <TSDiv tag="details" className="text-xs bg-black/10 border border-black/20 rounded p-2 mb-2">
+                                                        <TSDiv tag="summary" className="cursor-pointer">Transpiled preview (first 500 chars)</TSDiv>
+                                                        <TSDiv tag="pre" className="overflow-auto max-h-32 text-[11px] mt-1 whitespace-pre-wrap">{errorDetails.finalCodeSnippet}</TSDiv>
+                                                    </TSDiv>
                                                 )}
                                                 {errorDetails.transpiledCodeSnippet && (
-                                                    <details className="text-xs bg-black/10 border border-black/20 rounded p-2 mb-2">
-                                                        <summary className="cursor-pointer">Last transpiler output (window.__lastTranspiledCode)</summary>
-                                                        <pre className="overflow-auto max-h-32 text-[11px] mt-1 whitespace-pre-wrap">{errorDetails.transpiledCodeSnippet}</pre>
-                                                    </details>
+                                                    <TSDiv tag="details" className="text-xs bg-black/10 border border-black/20 rounded p-2 mb-2">
+                                                        <TSDiv tag="summary" className="cursor-pointer">Last transpiler output (window.__lastTranspiledCode)</TSDiv>
+                                                        <TSDiv tag="pre" className="overflow-auto max-h-32 text-[11px] mt-1 whitespace-pre-wrap">{errorDetails.transpiledCodeSnippet}</TSDiv>
+                                                    </TSDiv>
                                                 )}
                                                 {errorDetails.stack && Array.isArray(errorDetails.stack) && (
-                                                    <details className="text-xs">
-                                                        <summary className="cursor-pointer hover:underline opacity-70 mb-1">Stack trace</summary>
-                                                        <pre
+                                                    <TSDiv tag="details" className="text-xs">
+                                                        <TSDiv tag="summary" className="cursor-pointer hover:underline opacity-70 mb-1">Stack trace</TSDiv>
+                                                        <TSDiv tag="pre"
                                                             className="overflow-auto max-h-24 whitespace-pre-wrap opacity-60 bg-black/20 p-2 rounded">
-{errorDetails.stack.join('\n')}
-                                            </pre>
-                                                    </details>
+                                                            {errorDetails.stack.join('\n')}
+                                                        </TSDiv>
+                                                    </TSDiv>
                                                 )}
-                                            </div>
+                                            </TSDiv>
                                         )}
 
                                         {/* Repo fetch JSON mismatch diagnostics */}
                                         {errorDetails.fetchJson && (
-                                            <div className="bg-yellow-600/10 p-3 rounded border border-yellow-400/50">
-                                                <div className="font-semibold text-xs mb-2">Expected JSON but got HTML
+                                            <TSDiv className="bg-yellow-600/10 p-3 rounded border border-yellow-400/50">
+                                                <TSDiv className="font-semibold text-xs mb-2">Expected JSON but got HTML
                                                     (likely SPA fallback)
-                                                </div>
-                                                <div className="text-xs space-y-1 font-mono">
-                                                    <div><strong>URL:</strong> {errorDetails.fetchJson.url}</div>
-                                                    <div>
-                                                        <strong>Status:</strong> {String(errorDetails.fetchJson.status)} ({errorDetails.fetchJson.ok ? 'ok' : 'error'})
-                                                    </div>
-                                                    <div>
-                                                        <strong>Content-Type:</strong> {errorDetails.fetchJson.contentType || 'n/a'}
-                                                    </div>
+                                                </TSDiv>
+                                                <TSDiv className="text-xs space-y-1 font-mono">
+                                                    <TSDiv><TSDiv tag="strong">URL:</TSDiv> {errorDetails.fetchJson.url}</TSDiv>
+                                                    <TSDiv>
+                                                        <TSDiv tag="strong">Status:</TSDiv> {String(errorDetails.fetchJson.status)} ({errorDetails.fetchJson.ok ? 'ok' : 'error'})
+                                                    </TSDiv>
+                                                    <TSDiv>
+                                                        <TSDiv tag="strong">Content-Type:</TSDiv> {errorDetails.fetchJson.contentType || 'n/a'}
+                                                    </TSDiv>
                                                     {errorDetails.fetchJson.sample && (
-                                                        <details className="mt-2">
-                                                            <summary className="cursor-pointer">Response sample
-                                                            </summary>
-                                                            <pre
-                                                                className="mt-1 max-h-40 overflow-auto bg-black/20 p-2 rounded">{errorDetails.fetchJson.sample}</pre>
-                                                        </details>
+                                                        <TSDiv tag="details" className="mt-2">
+                                                            <TSDiv tag="summary" className="cursor-pointer">Response sample
+                                                            </TSDiv>
+                                                            <TSDiv tag="pre"
+                                                                className="mt-1 max-h-40 overflow-auto bg-black/20 p-2 rounded">{errorDetails.fetchJson.sample}</TSDiv>
+                                                        </TSDiv>
                                                     )}
-                                                </div>
-                                                <div className="text-xs mt-2 opacity-80">
+                                                </TSDiv>
+                                                <TSDiv className="text-xs mt-2 opacity-80">
                                                     Tips: Ensure the file exists in the repository, and that the relay
                                                     server serves it at the path above. If nginx SPA fallback is
                                                     enabled, upstream 404 may be converted into 200 HTML.
-                                                </div>
-                                            </div>
+                                                </TSDiv>
+                                            </TSDiv>
                                         )}
 
                                         {/* Show general diagnostics */}
                                         {errorDetails.reason && (
-                                            <div className="text-xs opacity-80">
-                                                <strong>Phase:</strong> {errorDetails.phase || 'unknown'} | <strong>Reason:</strong> {errorDetails.reason}
-                                            </div>
+                                            <TSDiv className="text-xs opacity-80">
+                                                <TSDiv tag="strong">Phase:</TSDiv> {errorDetails.phase || 'unknown'} | <TSDiv tag="strong">Reason:</TSDiv> {errorDetails.reason}
+                                            </TSDiv>
                                         )}
-                                    </div>
+                                    </TSDiv>
                                 )}
 
-                                <div className="mt-4 text-sm opacity-80">
-                                    <div className="font-semibold mb-2">Troubleshooting:</div>
-                                    <ul className="list-disc pl-5 space-y-1">
-                                        <li>Verify <code>.relay.yaml</code> contains <code>client.hooks.get.path</code> and <code>client.hooks.query.path</code>.
-                                        </li>
-                                        <li>Ensure the hook module exports a default function: <code>export default
+                                <TSDiv className="mt-4 text-sm opacity-80">
+                                    <TSDiv className="font-semibold mb-2">Troubleshooting:</TSDiv>
+                                    <TSDiv tag="ul" className="list-disc pl-5 space-y-1">
+                                        <TSDiv tag="li">Verify <TSDiv tag="code">.relay.yaml</TSDiv> contains <TSDiv tag="code">client.hooks.get.path</TSDiv> and <TSDiv tag="code">client.hooks.query.path</TSDiv>.
+                                        </TSDiv>
+                                        <TSDiv tag="li">Ensure the hook module exports a default function: <TSDiv tag="code">export default
                                             async
-                                            function(ctx) {'{'} return ... {'}'} </code></li>
-                                        <li>If using JSX, add a top-of-file comment <code>// @use-jsx</code> or
-                                            use <code>.jsx</code>/<code>.tsx</code> extension.
-                                        </li>
-                                        <li>Check browser console (F12) for detailed logs starting
-                                            with <code>[Hook]</code> or <code>[RepoBrowser]</code>.
-                                        </li>
-                                    </ul>
-                                </div>
+                                            function(ctx) {'{'} return ... {'}'} </TSDiv></TSDiv>
+                                        <TSDiv tag="li">If using JSX, add a top-of-file comment <TSDiv tag="code">// @use-jsx</TSDiv> or
+                                            use <TSDiv tag="code">.jsx</TSDiv>/<TSDiv tag="code">.tsx</TSDiv> extension.
+                                        </TSDiv>
+                                        <TSDiv tag="li">Check browser console (F12) for detailed logs starting
+                                            with <TSDiv tag="code">[Hook]</TSDiv> or <TSDiv tag="code">[RepoBrowser]</TSDiv>.
+                                        </TSDiv>
+                                    </TSDiv>
+                                </TSDiv>
 
                                 {/* Show full JSON for debugging */}
-                                <details className="mt-4 text-xs opacity-70">
-                                    <summary className="cursor-pointer font-semibold">Full Diagnostics (JSON)</summary>
-                                    <pre
+                                <TSDiv tag="details" className="mt-4 text-xs opacity-70">
+                                    <TSDiv tag="summary" className="cursor-pointer font-semibold">Full Diagnostics (JSON)</TSDiv>
+                                    <TSDiv tag="pre"
                                         className="mt-2 overflow-auto max-h-64 whitespace-pre-wrap bg-black/20 p-2 rounded">
-{JSON.stringify(errorDetails, null, 2)}
-                            </pre>
-                                </details>
+                                        {JSON.stringify(errorDetails, null, 2)}
+                                    </TSDiv>
+                                </TSDiv>
 
-                                <button onClick={loadContent}
-                                        className="px-4 py-2 bg-red-600 text-white border-none rounded cursor-pointer mt-4 hover:bg-red-700">Try
+                                <TSDiv
+                                    tag="button"
+                                    onClick={loadContent}
+                                    className="px-4 py-2 bg-red-600 text-white border-none rounded cursor-pointer mt-4 hover:bg-red-700">Try
                                     Again
-                                </button>
-                            </div>
+                                </TSDiv>
+                            </TSDiv>
                         )}
 
                         {!loading && (
                             tab?.host ? <HookRenderer host={tab.host} /> : null
                         )}
                         {/* No placeholders: if the hook didn't render and there's no error, render nothing */}
-                    </div>
+                    </TSDiv>
                 </ErrorBoundary>
 
                 {/* Footer with version and git pull button */}
-                <div
+                <TSDiv
                     className="border-t bg-[var(--bg-secondary)] px-4 py-3 flex items-center justify-between">
-                    <div className="text-sm text-[var(--text-secondary)]">
+                    <TSDiv className="text-sm text-[var(--text-secondary)]">
                         {serverHeadCommit ? (
-                            <span>
-                            Version: <code
-                                className="bg-[var(--bg-code)] px-2 py-1 rounded text-xs">{serverHeadCommit}</code>
-                        </span>
+                            <TSDiv tag="span">
+                                Version: <TSDiv tag="code"
+                                    className="bg-[var(--bg-code)] px-2 py-1 rounded text-xs">{serverHeadCommit}</TSDiv>
+                            </TSDiv>
                         ) : (
-                            <span>Version: loading...</span>
+                            <TSDiv tag="span">Version: loading...</TSDiv>
                         )}
-                    </div>
-                    <button
+                    </TSDiv>
+                    <TSDiv
+                        tag="button"
                         onClick={handleGitPull}
                         disabled={isPulling}
-                        className={`px-4 py-2 rounded text-sm font-medium transition ${
-                            isPulling
+                        className={`px-4 py-2 rounded text-sm font-medium transition ${isPulling
                                 ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
                                 : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
-                        }`}
+                            }`}
                         title={isPulling ? 'Pulling updates...' : 'Pull latest updates from origin'}
                     >
                         {isPulling ? '⟳ Pulling...' : `⟳ Pull${serverHeadCommit ? ` (${serverHeadCommit})` : ''}`}
-                    </button>
-                </div>
+                    </TSDiv>
+                </TSDiv>
 
                 {/* Update modal */}
                 {showUpdateModal && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                            <h2 className="text-xl font-bold mb-4 text-[var(--text)]">
+                    <TSDiv className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <TSDiv className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                            <TSDiv tag="h2" className="text-xl font-bold mb-4 text-[var(--text)]">
                                 Update Available
-                            </h2>
+                            </TSDiv>
                             {pullResult && (
-                                <div className="space-y-3 text-[var(--text)]">
-                                    <p>
-                                        <strong>Status:</strong> {pullResult.success ? '✓ Success' : '✗ Failed'}
-                                    </p>
-                                    <p>
-                                        <strong>Message:</strong> {pullResult.message}
-                                    </p>
+                                <TSDiv className="space-y-3 text-[var(--text)]">
+                                    <TSDiv tag="p">
+                                        <TSDiv tag="strong">Status:</TSDiv> {pullResult.success ? '✓ Success' : '✗ Failed'}
+                                    </TSDiv>
+                                    <TSDiv tag="p">
+                                        <TSDiv tag="strong">Message:</TSDiv> {pullResult.message}
+                                    </TSDiv>
                                     {pullResult.before_commit && (
-                                        <p>
-                                            <strong>Before:</strong>{' '}
-                                            <code className="bg-[var(--bg-code)] px-2 py-1 rounded text-xs">
+                                        <TSDiv tag="p">
+                                            <TSDiv tag="strong">Before:</TSDiv>{' '}
+                                            <TSDiv tag="code" className="bg-[var(--bg-code)] px-2 py-1 rounded text-xs">
                                                 {pullResult.before_commit.substring(0, 7)}
-                                            </code>
-                                        </p>
+                                            </TSDiv>
+                                        </TSDiv>
                                     )}
                                     {pullResult.after_commit && (
-                                        <p>
-                                            <strong>After:</strong>{' '}
-                                            <code className="bg-[var(--bg-code)] px-2 py-1 rounded text-xs">
+                                        <TSDiv tag="p">
+                                            <TSDiv tag="strong">After:</TSDiv>{' '}
+                                            <TSDiv tag="code" className="bg-[var(--bg-code)] px-2 py-1 rounded text-xs">
                                                 {pullResult.after_commit.substring(0, 7)}
-                                            </code>
-                                        </p>
+                                            </TSDiv>
+                                        </TSDiv>
                                     )}
-                                </div>
+                                </TSDiv>
                             )}
-                            <div className="flex gap-3 mt-6">
-                                <button
+                            <TSDiv className="flex gap-3 mt-6">
+                                <TSDiv
+                                    tag="button"
                                     onClick={() => setShowUpdateModal(false)}
                                     className="flex-1 px-4 py-2 bg-[var(--bg-secondary)] text-[var(--text)] rounded transition"
                                 >
                                     Close
-                                </button>
-                                <button
+                                </TSDiv>
+                                <TSDiv
+                                    tag="button"
                                     onClick={handleRefresh}
                                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-medium"
                                 >
                                     Refresh
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                                </TSDiv>
+                            </TSDiv>
+                        </TSDiv>
+                    </TSDiv>
                 )}
-            </div>
+            </TSDiv>
         </RepoFetchProvider>
     )
 }

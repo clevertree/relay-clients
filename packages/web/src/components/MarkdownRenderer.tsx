@@ -1,6 +1,7 @@
 import Markdown from 'markdown-to-jsx'
 import { useEffect, useRef } from 'react'
 import { VideoPlayer } from './VideoPlayer'
+import { TSDiv } from './TSDiv'
 
 interface MarkdownRendererProps {
   content: string
@@ -51,9 +52,9 @@ function SafeVideoComponent({ children, ...props }: any) {
   }
 
   return (
-    <video {...safeProps} style={{ maxWidth: '100%' }}>
+    <TSDiv tag="video" {...safeProps} style={{ maxWidth: '100%' }}>
       {children}
-    </video>
+    </TSDiv>
   )
 }
 
@@ -75,7 +76,7 @@ function SafeSourceComponent(props: any) {
   }
 
   console.log('Source final safeProps:', safeProps)
-  return <source {...safeProps} />
+  return <TSDiv tag="source" {...safeProps} />
 }
 
 /**
@@ -100,7 +101,7 @@ function SafeTrackComponent(props: any) {
   }
 
   console.log('Track final safeProps:', safeProps)
-  return <track {...safeProps} />
+  return <TSDiv tag="track" {...safeProps} />
 }
 
 /**
@@ -166,10 +167,10 @@ export function MarkdownRenderer({ content, navigate }: MarkdownRendererProps) {
   }
 
   return (
-    <div ref={contentRef} className="markdown-content">
+    <TSDiv ref={contentRef} className="markdown-content">
       <Markdown options={{ overrides }}>
         {processedContent}
       </Markdown>
-    </div>
+    </TSDiv>
   )
 }

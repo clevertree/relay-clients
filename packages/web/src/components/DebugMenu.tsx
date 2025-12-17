@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { TSDiv } from './TSDiv'
 
 export function DebugMenu() {
   const [isOpen, setIsOpen] = useState(false)
@@ -8,7 +9,7 @@ export function DebugMenu() {
   const copyHtmlToClipboard = async () => {
     try {
       const htmlString = document.documentElement.outerHTML
-      
+
       // Try to use clipboard API
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(htmlString)
@@ -28,51 +29,54 @@ export function DebugMenu() {
   }
 
   return (
-    <div className="fixed top-4 right-4 z-50">
+    <TSDiv className="fixed top-4 right-4 z-50">
       {/* Toggle Button */}
-      <button
+      <TSDiv
+        tag="button"
         onClick={() => setIsOpen(!isOpen)}
         className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-semibold shadow-lg transition-colors"
         title="Debug menu"
       >
         🐛 Debug
-      </button>
+      </TSDiv>
 
       {/* Menu */}
       {isOpen && (
-        <div className="absolute top-12 right-0 bg-gray-900 border rounded shadow-xl p-3 w-64 text-white text-sm">
-          <div className="space-y-2">
-            <button
+        <TSDiv className="absolute top-12 right-0 bg-gray-900 border rounded shadow-xl p-3 w-64 text-white text-sm">
+          <TSDiv className="space-y-2">
+            <TSDiv
+              tag="button"
               onClick={copyHtmlToClipboard}
               className="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-left transition-colors"
             >
               📋 Copy HTML to Clipboard
-            </button>
-            
+            </TSDiv>
+
             {copyStatus && (
-              <div className="bg-green-700 px-3 py-2 rounded text-center text-xs">
+              <TSDiv className="bg-green-700 px-3 py-2 rounded text-center text-xs">
                 {copyStatus}
-              </div>
+              </TSDiv>
             )}
-          </div>
-        </div>
+          </TSDiv>
+        </TSDiv>
       )}
 
       {/* Textarea Fallback Modal */}
       {showTextarea && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-2xl max-h-96 w-full mx-4 flex flex-col border">
-            <h2 className="text-white font-bold text-lg mb-3">Copy HTML</h2>
-            <p className="text-gray-300 text-xs mb-3">Clipboard API unavailable. Select and copy the HTML below:</p>
-            
+        <TSDiv className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <TSDiv className="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-2xl max-h-96 w-full mx-4 flex flex-col border">
+            <TSDiv tag="h2" className="text-white font-bold text-lg mb-3">Copy HTML</TSDiv>
+            <TSDiv tag="p" className="text-gray-300 text-xs mb-3">Clipboard API unavailable. Select and copy the HTML below:</TSDiv>
+
             <textarea
               value={document.documentElement.outerHTML}
               readOnly
               className="flex-1 bg-gray-900 text-gray-100 border rounded p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3 overflow-auto"
             />
-            
-            <div className="flex gap-2">
-              <button
+
+            <TSDiv className="flex gap-2">
+              <TSDiv
+                tag="button"
                 onClick={() => {
                   const textarea = document.querySelector('textarea[readonly]') as HTMLTextAreaElement
                   if (textarea) {
@@ -88,8 +92,9 @@ export function DebugMenu() {
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors"
               >
                 Copy
-              </button>
-              <button
+              </TSDiv>
+              <TSDiv
+                tag="button"
                 onClick={() => {
                   setShowTextarea(false)
                   setCopyStatus(null)
@@ -97,11 +102,11 @@ export function DebugMenu() {
                 className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition-colors"
               >
                 Close
-              </button>
-            </div>
-          </div>
-        </div>
+              </TSDiv>
+            </TSDiv>
+          </TSDiv>
+        </TSDiv>
       )}
-    </div>
+    </TSDiv>
   )
 }

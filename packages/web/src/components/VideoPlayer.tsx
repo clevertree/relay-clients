@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { DistributedFileLoader, type LoadingStatus, type FileLoadResult } from './DistributedFileLoader'
+import { TSDiv } from './TSDiv'
 
 type Subtitle = {
   src: string
@@ -48,21 +49,21 @@ function StatusDisplay({ status, message, progress }: { status: LoadingStatus; m
   const statusLabel = status.replace('-', ' ').toUpperCase()
 
   return (
-    <div className="mb-3 space-y-2">
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-lg">{getStatusIcon(status)}</span>
-        <span className="font-semibold">{statusLabel}</span>
+    <TSDiv className="mb-3 space-y-2">
+      <TSDiv className="flex items-center gap-2 text-sm">
+        <TSDiv tag="span" className="text-lg">{getStatusIcon(status)}</TSDiv>
+        <TSDiv tag="span" className="font-semibold">{statusLabel}</TSDiv>
         {progress !== undefined && progress < 100 && (
-          <span className="text-xs text-gray-400">({progress}%)</span>
+          <TSDiv tag="span" className="text-xs text-gray-400">({progress}%)</TSDiv>
         )}
-      </div>
-      <div className="text-xs text-gray-400">{message}</div>
+      </TSDiv>
+      <TSDiv className="text-xs text-gray-400">{message}</TSDiv>
       {progress !== undefined && progress < 100 && (
-        <div className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${progress}%` }} />
-        </div>
+        <TSDiv className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
+          <TSDiv className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+        </TSDiv>
       )}
-    </div>
+    </TSDiv>
   )
 }
 
@@ -73,23 +74,24 @@ function ErrorDisplay({ error, message }: { error: string; message: string }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className="mb-3 space-y-2">
-      <div className="text-sm text-red-400 font-semibold">Error loading media</div>
-      <div className="text-xs text-red-300 bg-red-900 bg-opacity-20 p-2 rounded">{error}</div>
+    <TSDiv className="mb-3 space-y-2">
+      <TSDiv className="text-sm text-red-400 font-semibold">Error loading media</TSDiv>
+      <TSDiv className="text-xs text-red-300 bg-red-900 bg-opacity-20 p-2 rounded">{error}</TSDiv>
       {message && (
-        <button
+        <TSDiv
+          tag="button"
           onClick={() => setExpanded(!expanded)}
           className="text-xs text-red-300 hover:text-red-200 underline"
         >
           {expanded ? '▼ Hide details' : '▶ Show details'}
-        </button>
+        </TSDiv>
       )}
       {expanded && message && (
-        <pre className="text-xs text-red-300 bg-red-900 bg-opacity-20 p-2 rounded max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono">
+        <TSDiv tag="pre" className="text-xs text-red-300 bg-red-900 bg-opacity-20 p-2 rounded max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono">
           {message}
-        </pre>
+        </TSDiv>
       )}
-    </div>
+    </TSDiv>
   )
 }
 
@@ -180,18 +182,18 @@ export function VideoPlayer({
     // Render a disabled placeholder UI but keep all internal state/hooks available so
     // re-enabling the feature is non-destructive and fast.
     return (
-      <div className={`w-full max-w-4xl rounded-lg border border-dashed bg-black/60 text-gray-300 p-6 ${className || ''}`} style={style}>
-        <div className="text-center space-y-2">
-          <div className="text-lg font-semibold">Video playback temporarily disabled</div>
-          <div className="text-sm text-gray-400">The VideoPlayer UI is currently disabled while we stabilize streaming. The underlying loader and playback code remain present and will be used when re-enabled.</div>
-          <div className="text-xs text-gray-500">Tip: set <code>window.__videoEnabled = true</code> in the console to re-enable for testing.</div>
-        </div>
-      </div>
+      <TSDiv className={`w-full max-w-4xl rounded-lg border border-dashed bg-black/60 text-gray-300 p-6 ${className || ''}`} style={style}>
+        <TSDiv className="text-center space-y-2">
+          <TSDiv className="text-lg font-semibold">Video playback temporarily disabled</TSDiv>
+          <TSDiv className="text-sm text-gray-400">The VideoPlayer UI is currently disabled while we stabilize streaming. The underlying loader and playback code remain present and will be used when re-enabled.</TSDiv>
+          <TSDiv className="text-xs text-gray-500">Tip: set <TSDiv tag="code">window.__videoEnabled = true</TSDiv> in the console to re-enable for testing.</TSDiv>
+        </TSDiv>
+      </TSDiv>
     )
   }
 
   return (
-    <div className={`w-full max-w-4xl space-y-3 ${className || ''}`} style={style}>
+    <TSDiv className={`w-full max-w-4xl space-y-3 ${className || ''}`} style={style}>
       {/* Use DistributedFileLoader to manage all media loading */}
       <DistributedFileLoader
         src={src}
@@ -213,7 +215,8 @@ export function VideoPlayer({
 
       {/* Video element - shown when ready */}
       {isReady && resolvedSrc ? (
-        <video
+        <TSDiv
+          tag="video"
           ref={videoRef}
           src={resolvedSrc}
           poster={poster}
@@ -221,7 +224,8 @@ export function VideoPlayer({
           style={{ width: '100%', maxHeight: 480 }}
         >
           {(subtitles || []).map((t, i) => (
-            <track
+            <TSDiv
+              tag="track"
               key={i}
               src={t.src}
               label={t.label}
@@ -230,14 +234,14 @@ export function VideoPlayer({
               default={t.default}
             />
           ))}
-        </video>
+        </TSDiv>
       ) : (
-        <div className="w-full bg-gray-800 rounded aspect-video flex items-center justify-center">
-          {!isError && <div className="text-gray-400 text-sm">Loading media...</div>}
-          {isError && <div className="text-red-400 text-sm">Unable to load media</div>}
-        </div>
+        <TSDiv className="w-full bg-gray-800 rounded aspect-video flex items-center justify-center">
+          {!isError && <TSDiv className="text-gray-400 text-sm">Loading media...</TSDiv>}
+          {isError && <TSDiv className="text-red-400 text-sm">Unable to load media</TSDiv>}
+        </TSDiv>
       )}
-    </div>
+    </TSDiv>
   )
 }
 

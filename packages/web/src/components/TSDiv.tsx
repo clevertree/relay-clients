@@ -1,4 +1,5 @@
 import React, { useContext, useEffect } from 'react'
+import { Image } from 'react-native'
 import { unifiedBridge, styleManager } from '@clevertree/relay-client-shared'
 
 type DivProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -26,6 +27,20 @@ export const TSDiv: React.FC<DivProps> = ({ children, tag='div', ...props }) => 
     }
     // We only care when the identifying props that affect classes change
   }, [props.className, tag])
+
+  // Special handling for img tags - wrap with RN Image while maintaining themed-styler
+  if (tag === 'img') {
+    const { src, alt, ...restProps } = props as any
+    return React.createElement(
+      HierContext.Provider,
+      { value: hier },
+      React.createElement(Image, {
+        source: typeof src === 'string' ? { uri: src } : src,
+        accessibilityLabel: alt,
+        ...restProps,
+      })
+    )
+  }
 
   return React.createElement(
     tag,

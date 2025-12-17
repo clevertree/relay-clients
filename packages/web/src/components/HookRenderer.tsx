@@ -1,7 +1,8 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {HookLoader, WebModuleLoader, transpileCode, type HookContext, unifiedBridge, styleManager} from '@clevertree/relay-client-shared'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { HookLoader, WebModuleLoader, transpileCode, type HookContext, unifiedBridge, styleManager } from '@clevertree/relay-client-shared'
 import ErrorBoundary from './ErrorBoundary'
-import {FileRenderer} from './FileRenderer'
+import { FileRenderer } from './FileRenderer'
+import { TSDiv } from './TSDiv'
 
 type HookRendererProps = { host: string; hookPath?: string }
 
@@ -19,7 +20,7 @@ function registerUsageFromElement(tag: string, props?: Record<string, any>) {
         // delegate to the shared runtime bridge which centralizes usage
         unifiedBridge.registerUsage(tag, props as any)
         // request a render from the style manager (debounced internally)
-        try { styleManager.requestRender() } catch (e) {}
+        try { styleManager.requestRender() } catch (e) { }
     } catch (e) {
         // noop
     }
@@ -31,7 +32,7 @@ function createHookReact(reactModule: typeof React) {
         if (typeof type === 'string') {
             try {
                 registerUsageFromElement(type, props)
-            } catch (e) {}
+            } catch (e) { }
         }
         return baseCreate(type, props, ...children)
     }
@@ -64,9 +65,9 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
         try {
             styleManager.startAutoSync()
             styleManager.requestRender()
-        } catch (e) {}
+        } catch (e) { }
         return () => {
-            try { styleManager.stopAutoSync() } catch (e) {}
+            try { styleManager.stopAutoSync() } catch (e) { }
         }
     }, [normalizedHost, host])
 
@@ -79,25 +80,25 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
             const [loading, setLoading] = useState(true)
             useEffect(() => {
                 let cancelled = false
-                ;(async () => {
-                    try {
-                        const url = `${normalizedHost}${path.startsWith('/') ? path : '/' + path}`
-                        const resp = await fetch(url)
-                        const txt = await resp.text()
-                        if (!cancelled) {
-                            setContent(txt)
-                            setContentType(resp.headers.get('content-type') || 'text/plain')
+                    ; (async () => {
+                        try {
+                            const url = `${normalizedHost}${path.startsWith('/') ? path : '/' + path}`
+                            const resp = await fetch(url)
+                            const txt = await resp.text()
+                            if (!cancelled) {
+                                setContent(txt)
+                                setContentType(resp.headers.get('content-type') || 'text/plain')
+                            }
+                        } catch (e) {
+                            if (!cancelled) setContent('')
+                        } finally {
+                            if (!cancelled) setLoading(false)
                         }
-                    } catch (e) {
-                        if (!cancelled) setContent('')
-                    } finally {
-                        if (!cancelled) setLoading(false)
-                    }
-                })()
+                    })()
                 return () => { cancelled = true }
             }, [path])
 
-            if (loading) return <div>Loading file...</div>
+            if (loading) return <TSDiv>Loading file...</TSDiv>
             return <FileRenderer content={content} contentType={contentType} />
         }
 
@@ -113,13 +114,13 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
             Layout: undefined,
             params: {},
             helpers: {
-                navigate: () => {},
+                navigate: () => { },
                 buildPeerUrl: buildPeer,
                 loadModule,
                 registerThemeStyles: (name: string, defs?: Record<string, any>) => {
                     unifiedBridge.registerTheme(name, defs)
                     // After registering a theme, re-render CSS into the DOM
-                    try { styleManager.renderCssIntoDom() } catch (e) {}
+                    try { styleManager.renderCssIntoDom() } catch (e) { }
                 }
             }
         }
@@ -136,7 +137,7 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
             const el = await loaderRef.current.loadAndExecuteHook(path, ctx)
             setElement(el)
             // After rendering the hook, ensure CSS for currently-registered usage is applied
-            try { styleManager.renderCssIntoDom() } catch (e) {}
+            try { styleManager.renderCssIntoDom() } catch (e) { }
         } catch (e: any) {
             setError(e?.message || String(e))
         } finally {
@@ -147,15 +148,15 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
     useEffect(() => { void tryRender() }, [tryRender])
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {loading && <div>Loading hook...</div>}
-            {error && <div style={{ color: 'red' }}><strong>Error:</strong> {error}</div>}
+        <TSDiv style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {loading && <TSDiv>Loading hook...</TSDiv>}
+            {error && <TSDiv style={{ color: 'red' }}><TSDiv tag="strong">Error:</TSDiv> {error}</TSDiv>}
             {!loading && !error && element && (
                 <ErrorBoundary>
-                    <div style={{ flex: 1 }}>{element}</div>
+                    <TSDiv style={{ flex: 1 }}>{element}</TSDiv>
                 </ErrorBoundary>
             )}
-        </div>
+        </TSDiv>
     )
 }
 

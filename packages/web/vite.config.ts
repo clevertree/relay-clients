@@ -18,9 +18,6 @@ export default defineConfig({
     // Disable sourcemaps by default to keep Docker/CI builds memory-light.
     // Enable by setting VITE_SOURCEMAP=true when needed locally.
     sourcemap: process.env.VITE_SOURCEMAP === 'true',
-    rollupOptions: {
-      external: ['@babel/standalone', 'react', 'react-dom'],
-    },
   },
   // Ensure React dev build can be selected for debug dist builds
   // Use VITE_NODE_ENV to force development mode when needed
@@ -35,5 +32,6 @@ export default defineConfig({
       // Provide a shim alias for Babel-standalone so shared code can import a stable name
       '@babel-standalone-shim': '@babel/standalone',
     },
+    dedupe: ['react', 'react-dom'],
   },
 })

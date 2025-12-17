@@ -1,6 +1,7 @@
-import {useCallback, useEffect, useRef, useState} from 'react'
-import {type PeerInfo, useAppState} from '../state/store'
-import {fullProbePeer} from '../services/probing'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { type PeerInfo, useAppState } from '../state/store'
+import { fullProbePeer } from '../services/probing'
+import { TSDiv } from './TSDiv'
 
 const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 
@@ -8,7 +9,7 @@ interface PeersViewProps {
     onPeerPress?: (host: string) => void
 }
 
-export function PeersView({onPeerPress}: PeersViewProps) {
+export function PeersView({ onPeerPress }: PeersViewProps) {
     const peers = useAppState((s) => s.peers)
     const setPeers = useAppState((s) => s.setPeers)
     const updatePeer = useAppState((s) => s.updatePeer)
@@ -92,21 +93,23 @@ export function PeersView({onPeerPress}: PeersViewProps) {
     // Get status and probe info
     const renderProbeStatus = (peer: PeerInfo) => {
         if (!peer.probes || peer.probes.length === 0) {
-            return <span
-                className="text-xs px-2 py-1 rounded whitespace-nowrap bg-gray-100 text-gray-700">Not probed</span>
+            return <TSDiv
+                tag="span"
+                className="text-xs px-2 py-1 rounded whitespace-nowrap bg-gray-100 text-gray-700">Not probed</TSDiv>
         }
 
         const okProbes = peer.probes.filter((p) => p.ok)
         if (okProbes.length === 0) {
-            return <span
-                className="text-xs px-2 py-1 rounded whitespace-nowrap bg-red-100/50 text-red-600 font-semibold">Offline</span>
+            return <TSDiv
+                tag="span"
+                className="text-xs px-2 py-1 rounded whitespace-nowrap bg-red-100/50 text-red-600 font-semibold">Offline</TSDiv>
         }
 
         const latency = okProbes[0].latencyMs
         return (
-            <span className="text-xs px-2 py-1 rounded whitespace-nowrap bg-green-100/50 text-green-700 font-semibold">
-        Online {latency ? `(${latency.toFixed(0)}ms)` : ''}
-      </span>
+            <TSDiv tag="span" className="text-xs px-2 py-1 rounded whitespace-nowrap bg-green-100/50 text-green-700 font-semibold">
+                Online {latency ? `(${latency.toFixed(0)}ms)` : ''}
+            </TSDiv>
         )
     }
 
@@ -137,15 +140,15 @@ export function PeersView({onPeerPress}: PeersViewProps) {
     }
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 border-r">
-            <div className="p-4 border-b">
-                <div className="flex items-center gap-3 mb-4">
-                    <img src="/icon.png" alt="Relay" width="24" height="24" className="flex-shrink-0"/>
-                    <h2 className="m-0 text-xl font-semibold">Relay</h2>
-                </div>
+        <TSDiv className="flex flex-col h-full bg-gray-50 border-r">
+            <TSDiv className="p-4 border-b">
+                <TSDiv className="flex items-center gap-3 mb-4">
+                    <TSDiv tag="img" src="/icon.png" alt="Relay" width="24" height="24" className="flex-shrink-0" />
+                    <TSDiv tag="h2" className="m-0 text-xl font-semibold">Relay</TSDiv>
+                </TSDiv>
 
                 {/* Add peer input form */}
-                <form onSubmit={handleAddPeer} className="flex gap-2">
+                <TSDiv tag="form" onSubmit={handleAddPeer} className="flex gap-2">
                     <input
                         type="text"
                         placeholder="https://example.com"
@@ -153,84 +156,87 @@ export function PeersView({onPeerPress}: PeersViewProps) {
                         onChange={(e) => setNewPeerInput(e.target.value)}
                         className="flex-1 px-3 py-2 border rounded text-sm focus:outline-none focus:border-blue-500"
                     />
-                    <button
-                        type="submit"
+                    <TSDiv
+                        tag="button"
+                        {...({ type: 'submit' } as any)}
                         className="px-3 py-2 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600 transition-colors"
                     >
                         Add
-                    </button>
-                </form>
-            </div>
+                    </TSDiv>
+                </TSDiv>
+            </TSDiv>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-1 p-2">
+            <TSDiv className="flex-1 overflow-y-auto flex flex-col gap-1 p-2">
                 {peers.length === 0 ? (
-                    <div className="flex items-center justify-center h-full p-8 text-center text-gray-600">
-                        <p className="m-0">No peers configured. Add one using the form above or set RELAY_PEERS
-                            environment variable.</p>
-                    </div>
+                    <TSDiv className="flex items-center justify-center h-full p-8 text-center text-gray-600">
+                        <TSDiv tag="p" className="m-0">No peers configured. Add one using the form above or set RELAY_PEERS
+                            environment variable.</TSDiv>
+                    </TSDiv>
                 ) : (
                     peers.map((peer) => (
-                        <div
+                        <TSDiv
                             key={peer.host}
                             className="p-4 bg-white border rounded-lg cursor-pointer transition-all hover:bg-gray-50 hover:border-blue-500 hover:shadow-lg group"
                             onClick={() => handlePeerPress(peer.host)}
                         >
-                            <div className="flex justify-between items-center gap-4 mb-2">
-                                <div className="flex items-center gap-2 flex-1">
-                                    <span className="font-semibold text-base text-gray-900">{peer.host}</span>
-                                    {peer.isProbing && <span className="inline-block text-sm animation-spin">⟳</span>}
-                                </div>
-                                <div className="flex items-center gap-2">
+                            <TSDiv className="flex justify-between items-center gap-4 mb-2">
+                                <TSDiv className="flex items-center gap-2 flex-1">
+                                    <TSDiv tag="span" className="font-semibold text-base text-gray-900">{peer.host}</TSDiv>
+                                    {peer.isProbing && <TSDiv tag="span" className="inline-block text-sm animation-spin">⟳</TSDiv>}
+                                </TSDiv>
+                                <TSDiv className="flex items-center gap-2">
                                     {renderProbeStatus(peer)}
-                                    <button
+                                    <TSDiv
+                                        tag="button"
                                         onClick={(e) => handleRemovePeer(e, peer.host)}
                                         className="px-2 py-1 bg-red-500 text-white rounded text-xs font-medium hover:bg-red-600 transition-all"
                                         title="Remove peer"
                                     >
                                         ✕
-                                    </button>
-                                </div>
-                            </div>
+                                    </TSDiv>
+                                </TSDiv>
+                            </TSDiv>
 
                             {peer.reposWithBranches && peer.reposWithBranches.length > 0 && (
-                                <div className="text-sm space-y-2 mt-2">
-                                    <div className="font-semibold text-gray-600">Repositories:</div>
-                                    <div className="space-y-2 pl-2">
+                                <TSDiv className="text-sm space-y-2 mt-2">
+                                    <TSDiv className="font-semibold text-gray-600">Repositories:</TSDiv>
+                                    <TSDiv className="space-y-2 pl-2">
                                         {peer.reposWithBranches.map((repo) => (
-                                            <div key={repo.name} className="space-y-1">
-                                                <div className="font-mono text-xs font-semibold bg-blue-50 text-blue-700 px-2 py-1 rounded w-fit">
+                                            <TSDiv key={repo.name} className="space-y-1">
+                                                <TSDiv className="font-mono text-xs font-semibold bg-blue-50 text-blue-700 px-2 py-1 rounded w-fit">
                                                     {repo.name}
-                                                </div>
-                                                <div className="space-y-1 pl-2">
+                                                </TSDiv>
+                                                <TSDiv className="space-y-1 pl-2">
                                                     {Object.entries(repo.branches).map(([branch, commit]) => (
-                                                        <div key={branch} className="flex items-center gap-2 text-xs text-gray-600">
-                                                            <span className="font-semibold">{branch}:</span>
-                                                            <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">
+                                                        <TSDiv key={branch} className="flex items-center gap-2 text-xs text-gray-600">
+                                                            <TSDiv tag="span" className="font-semibold">{branch}:</TSDiv>
+                                                            <TSDiv tag="code" className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">
                                                                 {commit.substring(0, 7)}
-                                                            </code>
-                                                        </div>
+                                                            </TSDiv>
+                                                        </TSDiv>
                                                     ))}
-                                                </div>
-                                            </div>
+                                                </TSDiv>
+                                            </TSDiv>
                                         ))}
-                                    </div>
-                                </div>
+                                    </TSDiv>
+                                </TSDiv>
                             )}
 
-                            <button
+                            <TSDiv
+                                tag="button"
                                 className="w-full px-2 py-2 mt-2 bg-blue-500 text-white border-none rounded cursor-pointer text-sm font-medium hover:bg-blue-600 transition-colors"
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     handlePeerPress(peer.host)
                                 }}
                             >
-                                Open →
-                            </button>
-                        </div>
+                                Open →d
+                            </TSDiv>
+                        </TSDiv>
                     ))
                 )}
-            </div>
-        </div>
+            </TSDiv>
+        </TSDiv>
     )
 }
 
@@ -273,13 +279,13 @@ async function getPeersFromEnvironment(): Promise<string[]> {
         const baseUrl = window.location.origin
 
         try {
-            response = await fetch(`${baseUrl}/api/config`, {signal: AbortSignal.timeout(3000)})
+            response = await fetch(`${baseUrl}/api/config`, { signal: AbortSignal.timeout(3000) })
         } catch (e) {
             console.log('[getPeersFromEnvironment] Failed to fetch from', `${baseUrl}/api/config`, e)
             // If we're on HTTPS, try HTTP fallback
             if (baseUrl.startsWith('https')) {
                 const httpUrl = baseUrl.replace('https://', 'http://')
-                response = await fetch(`${httpUrl}/api/config`, {signal: AbortSignal.timeout(3000)})
+                response = await fetch(`${httpUrl}/api/config`, { signal: AbortSignal.timeout(3000) })
             }
         }
 

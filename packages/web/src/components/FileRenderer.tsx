@@ -1,4 +1,5 @@
 import { MarkdownRenderer } from './MarkdownRenderer'
+import { TSDiv } from './TSDiv'
 
 interface FileRendererProps {
   content: string
@@ -9,7 +10,7 @@ export function FileRenderer({ content, contentType }: FileRendererProps) {
   const lower = (contentType || '').toLowerCase()
 
   if (lower.includes('markdown') || lower.includes('md')) {
-    return <MarkdownRenderer content={content} navigate={() => {}} />
+    return <MarkdownRenderer content={content} navigate={() => { }} />
   }
 
   if (lower.startsWith('image/')) {
@@ -17,9 +18,9 @@ export function FileRenderer({ content, contentType }: FileRendererProps) {
     const isDataUrl = content.startsWith('data:')
     const src = isDataUrl ? content : `data:${contentType};base64,${content}`
     return (
-      <div className="flex justify-center">
-        <img src={src} alt="image" className="max-w-full h-auto" />
-      </div>
+      <TSDiv className="flex justify-center">
+        <TSDiv tag="img" src={src} alt="image" className="max-w-full h-auto" />
+      </TSDiv>
     )
   }
 
@@ -27,26 +28,26 @@ export function FileRenderer({ content, contentType }: FileRendererProps) {
     let pretty: string = content
     try {
       pretty = JSON.stringify(JSON.parse(content), null, 2)
-    } catch {}
+    } catch { }
     return (
-      <pre className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
+      <TSDiv tag="pre" className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
         {pretty}
-      </pre>
+      </TSDiv>
     )
   }
 
   if (lower.startsWith('text/') || !lower) {
     return (
-      <pre className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
+      <TSDiv tag="pre" className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
         {content}
-      </pre>
+      </TSDiv>
     )
   }
 
   // Fallback: show as plain text
   return (
-    <pre className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
+    <TSDiv tag="pre" className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
       {content}
-    </pre>
+    </TSDiv>
   )
 }

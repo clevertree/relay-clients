@@ -1,4 +1,5 @@
 import React from 'react'
+import { TSDiv } from './TSDiv'
 
 interface TemplateLayoutProps {
   title?: string
@@ -7,12 +8,13 @@ interface TemplateLayoutProps {
 
 export function TemplateLayout({ title, children }: TemplateLayoutProps) {
   return (
-    <div className="max-w-5xl mx-auto">
+    <TSDiv className="max-w-5xl mx-auto">
       {title && (
-        <div className="mb-4 border-b pb-2">
-          <h1 className="text-xl font-semibold">{title}</h1>
-        </div>
+        <TSDiv className="mb-4 border-b pb-2">
+          <TSDiv tag="h1" className="text-xl font-semibold">{title}</TSDiv>
+        </TSDiv>
       )}
-      <div>{children}</div>
-    </div>
-  )}
+      <TSDiv>{children}</TSDiv>
+    </TSDiv>
+  )
+}
