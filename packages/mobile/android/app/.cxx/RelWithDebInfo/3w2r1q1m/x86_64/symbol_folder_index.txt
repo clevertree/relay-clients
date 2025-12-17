@@ -1,0 +1,1 @@
+/home/ari/dev/relay/apps/client-react-native/android/app/build/intermediates/cxx/RelWithDebInfo/3w2r1q1m/obj/x86_64

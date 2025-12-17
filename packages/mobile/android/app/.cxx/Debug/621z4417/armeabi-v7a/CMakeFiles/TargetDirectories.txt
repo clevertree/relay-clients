@@ -1,0 +1,15 @@
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/CMakeFiles/appmodules.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/CMakeFiles/edit_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/CMakeFiles/rebuild_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/pagerview_autolinked_build/CMakeFiles/react_codegen_pagerview.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/pagerview_autolinked_build/CMakeFiles/edit_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/pagerview_autolinked_build/CMakeFiles/rebuild_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/safeareacontext_autolinked_build/CMakeFiles/edit_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/safeareacontext_autolinked_build/CMakeFiles/rebuild_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/rnscreens_autolinked_build/CMakeFiles/react_codegen_rnscreens.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/rnscreens_autolinked_build/CMakeFiles/edit_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/rnscreens_autolinked_build/CMakeFiles/rebuild_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/RNCWebViewSpec_autolinked_build/CMakeFiles/react_codegen_RNCWebViewSpec.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/RNCWebViewSpec_autolinked_build/CMakeFiles/edit_cache.dir
+/home/ari/dev/relay/apps/client-react-native/android/app/.cxx/Debug/621z4417/armeabi-v7a/RNCWebViewSpec_autolinked_build/CMakeFiles/rebuild_cache.dir

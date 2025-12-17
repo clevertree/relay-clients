@@ -1,0 +1,1 @@
+/home/ari/dev/relay/apps/client-react-native/android/app/build/intermediates/cxx/Debug/1p1h5z1m/obj/x86_64
