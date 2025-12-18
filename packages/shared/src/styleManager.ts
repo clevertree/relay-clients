@@ -15,14 +15,14 @@ function createEmitter() {
   return {
     addEventListener: (_: string, h: (ev?: any) => void) => { handlers.push(h) },
     removeEventListener: (_: string, h: (ev?: any) => void) => { const i = handlers.indexOf(h); if (i >= 0) handlers.splice(i, 1) },
-    dispatchEvent: (ev?: any) => { handlers.slice().forEach(h => { try { h(ev) } catch (e) {} }); return true }
+    dispatchEvent: (ev?: any) => { handlers.slice().forEach(h => { try { h(ev) } catch (e) { } }); return true }
   }
 }
 const emitter = createEmitter()
 const isDevMode = (() => {
   try {
     if (typeof (globalThis as any).__DEV__ !== 'undefined') return !!(globalThis as any).__DEV__
-  } catch (e) {}
+  } catch (e) { }
   try {
     return (typeof process !== 'undefined' && (process.env && process.env.NODE_ENV === 'development')) || false
   } catch (e) {
@@ -56,7 +56,7 @@ export function requestRender() {
   try {
     checkAndRender()
     if (emitter) emitter.dispatchEvent(new Event('change'))
-  } catch (e) {}
+  } catch (e) { }
 }
 
 export function wrapCreateElement(reactModule: any) {
@@ -66,7 +66,7 @@ export function wrapCreateElement(reactModule: any) {
       try {
         unifiedBridge.registerUsage(type, props)
         requestRender()
-      } catch (e) {}
+      } catch (e) { }
     }
     return baseCreate(type, props, ...children)
   }
@@ -92,18 +92,18 @@ function checkAndRender() {
   try {
     const snap = unifiedBridge.getUsageSnapshot()
     const j = JSON.stringify(snap)
-    const selectorsCount = snap?.selectors?.length ?? 0
+    const tagsCount = snap?.tags?.length ?? 0
     const changed = j !== lastSnapshotJson
     if (!changed && !forceRenderNext) return
     if (isDevMode) {
-      console.debug('[styleManager] checkAndRender', { selectors: selectorsCount, changed, forceRender: forceRenderNext })
+      console.debug('[styleManager] checkAndRender', { tags: tagsCount, changed, forceRender: forceRenderNext })
     }
     lastSnapshotJson = j
     forceRenderNext = false
     // debounce actual DOM writes to avoid thrash
     if (debounceTimer) globalThis.clearTimeout(debounceTimer)
     debounceTimer = globalThis.setTimeout(() => {
-      try { renderCssIntoDom() } catch (e) {}
+      try { renderCssIntoDom() } catch (e) { }
       debounceTimer = null
     }, 50)
   } catch (e) {
@@ -131,7 +131,7 @@ export function stopAutoSync() {
 }
 
 export function onChange(cb: (ev?: Event) => void) {
-  if (!emitter) return () => {}
+  if (!emitter) return () => { }
   const h = (ev: Event) => cb(ev)
   emitter.addEventListener('change', h)
   return () => emitter.removeEventListener('change', h)

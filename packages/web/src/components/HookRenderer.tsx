@@ -15,24 +15,28 @@ function normalizeHostUrl(host: string) {
 
 // Lightweight client-side usage registry. This collects used selectors/classes at runtime.
 // Later we can wire this to the themed-styler state via an IPC/CLI call or network endpoint.
-function registerUsageFromElement(tag: string, props?: Record<string, any>) {
+function registerUsageFromElement(tag: string, props?: Record<string, unknown>) {
     try {
         // delegate to the shared runtime bridge which centralizes usage
-        unifiedBridge.registerUsage(tag, props as any)
+        unifiedBridge.registerUsage(tag, props as Record<string, unknown>)
         // request a render from the style manager (debounced internally)
-        try { styleManager.requestRender() } catch (e) { }
+        try { styleManager.requestRender() } catch (e) {
+            console.debug('Style manager render failed:', e)
+        }
     } catch (e) {
-        // noop
+        console.debug('Usage registration failed:', e)
     }
 }
 
 function createHookReact(reactModule: typeof React) {
-    const baseCreate = reactModule.createElement.bind(reactModule as any)
-    function hookCreateElement(type: any, props: any, ...children: any[]) {
+    const baseCreate = reactModule.createElement.bind(reactModule)
+    function hookCreateElement(type: string | React.ComponentType, props: Record<string, unknown> | null, ...children: React.ReactNode[]) {
         if (typeof type === 'string') {
             try {
-                registerUsageFromElement(type, props)
-            } catch (e) { }
+                registerUsageFromElement(type, props || undefined)
+            } catch (e) {
+                console.debug('Element registration failed:', e)
+            }
         }
         return baseCreate(type, props, ...children)
     }
@@ -65,9 +69,13 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
         try {
             styleManager.startAutoSync()
             styleManager.requestRender()
-        } catch (e) { }
+        } catch (e) {
+            console.debug('Failed to start style auto-sync:', e)
+        }
         return () => {
-            try { styleManager.stopAutoSync() } catch (e) { }
+            try { styleManager.stopAutoSync() } catch (e) {
+                console.debug('Failed to stop style auto-sync:', e)
+            }
         }
     }, [normalizedHost, host])
 

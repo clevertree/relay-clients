@@ -331,7 +331,7 @@ export const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath: hook
       {loading && (
         <TWView className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#007AFF" />
-          <TWText className="mt-3 text-gray-600">Loading...</TWText>
+          <TWText className="mt-3">Loading...</TWText>
         </TWView>
       )}
 
@@ -340,13 +340,13 @@ export const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath: hook
           <TWText className="text-lg font-bold text-red-600 mb-3">Error</TWText>
           <TWText className="text-gray-800">{error}</TWText>
           {retryAttempts >= MAX_ERROR_RETRIES && (
-            <TWText className="text-xs text-gray-500 mt-2">
+            <TWText className="text-xs mt-2">
               Automatic retries paused after {MAX_ERROR_RETRIES} failed attempts. Tap Retry to try again.
             </TWText>
           )}
           {details && (
             <TWView className="mt-2 rounded-md bg-gray-100 p-2">
-              <TWText className="font-mono text-xs text-gray-600">{JSON.stringify(details, null, 2)}</TWText>
+              <TWText className="font-mono text-xs">{JSON.stringify(details, null, 2)}</TWText>
             </TWView>
           )}
           <TWButton className="mt-3 bg-primary px-4 py-2 rounded" onPress={handleRetry}>

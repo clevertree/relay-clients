@@ -17,7 +17,9 @@
     "loader",
     "hooks"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "yaml": "^2.0.0"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",

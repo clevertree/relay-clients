@@ -36,7 +36,7 @@ export class HookErrorBoundary extends React.Component<Props, State> {
       return (
         <TWView className="mx-3 my-2 rounded-lg bg-red-50 border border-red-200 p-4">
           <TWText className="font-bold text-red-700 mb-1">Hook rendering failed</TWText>
-          <TWText className="text-xs text-gray-500 mb-1">Script: {this.props.scriptPath ?? 'unknown'}</TWText>
+          <TWText className="text-xs mb-1">Script: {this.props.scriptPath ?? 'unknown'}</TWText>
           <TWText className="text-red-700">{this.state.error.message}</TWText>
         </TWView>
       )

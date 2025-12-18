@@ -69,6 +69,7 @@ export async function initAllClientWasms(): Promise<void> {
       }
       const renderCss = (stylerMod as any).render_css_for_web as ((s: string) => string) | undefined
       const getRn = (stylerMod as any).get_rn_styles as ((state_json: string, selector: string, classes_json: string) => string) | undefined
+      const getThemeListJson = (stylerMod as any).get_theme_list_json as ((state_json: string) => string) | undefined
       // Expose themed-styler version if available
       if (typeof (stylerMod as any).get_version === 'function') {
         try { (globalThis as any).__themedStyler_version = (stylerMod as any).get_version() } catch (e) { (globalThis as any).__themedStyler_version = 'unknown' }
@@ -82,12 +83,14 @@ export async function initAllClientWasms(): Promise<void> {
             const themeMap = themes?.themes || {}
             const currentTheme = themes?.currentTheme
             const defaultTheme = currentTheme || Object.keys(themeMap)[0] || 'default'
+            // Structured usage: tags, classes, tag+class pairs
             const state = JSON.stringify({
               themes: themeMap,
               current_theme: currentTheme || defaultTheme,
               default_theme: defaultTheme,
-              used_selectors: usageSnapshot?.selectors || [],
+              used_tags: usageSnapshot?.tags || [],
               used_classes: usageSnapshot?.classes || [],
+              used_tag_classes: usageSnapshot?.tagClasses || [],
             })
             return String(renderCss(state))
           } catch (e) {
@@ -111,6 +114,25 @@ export async function initAllClientWasms(): Promise<void> {
             return JSON.parse(String(getRn(stateJson, selector, classesJson)))
           } catch (e) {
             return {}
+          }
+        }
+      }
+
+      if (typeof getThemeListJson === 'function') {
+        ; (globalThis as any).__themedStylerGetThemeList = () => {
+          try {
+            const themesSnapshot = (globalThis as any).__bridgeGetThemes ? (globalThis as any).__bridgeGetThemes() : { themes: {}, currentTheme: null }
+            const themeMap = themesSnapshot?.themes || {}
+            const currentTheme = themesSnapshot?.currentTheme || null
+            const defaultTheme = currentTheme || Object.keys(themeMap)[0] || 'default'
+            const stateJson = JSON.stringify({
+              themes: themeMap,
+              current_theme: currentTheme || defaultTheme,
+              default_theme: defaultTheme,
+            })
+            return String(getThemeListJson(stateJson))
+          } catch (e) {
+            return '[]'
           }
         }
       }

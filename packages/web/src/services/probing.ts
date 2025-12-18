@@ -238,7 +238,7 @@ export async function fetchPeerOptions(
       }
     } catch (err) {
       // Continue to next protocol
-      continue
+
     }
   }
 

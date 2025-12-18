@@ -95,7 +95,7 @@ export function PeersView({ onPeerPress }: PeersViewProps) {
         if (!peer.probes || peer.probes.length === 0) {
             return <TSDiv
                 tag="span"
-                className="text-xs px-2 py-1 rounded whitespace-nowrap bg-gray-100 text-gray-700">Not probed</TSDiv>
+                className="text-xs px-2 py-1 rounded whitespace-nowrap bg-gray-100">Not probed</TSDiv>
         }
 
         const okProbes = peer.probes.filter((p) => p.ok)
@@ -168,7 +168,7 @@ export function PeersView({ onPeerPress }: PeersViewProps) {
 
             <TSDiv className="flex-1 overflow-y-auto flex flex-col gap-1 p-2">
                 {peers.length === 0 ? (
-                    <TSDiv className="flex items-center justify-center h-full p-8 text-center text-gray-600">
+                    <TSDiv className="flex items-center justify-center h-full p-8 text-center">
                         <TSDiv tag="p" className="m-0">No peers configured. Add one using the form above or set RELAY_PEERS
                             environment variable.</TSDiv>
                     </TSDiv>
@@ -181,7 +181,7 @@ export function PeersView({ onPeerPress }: PeersViewProps) {
                         >
                             <TSDiv className="flex justify-between items-center gap-4 mb-2">
                                 <TSDiv className="flex items-center gap-2 flex-1">
-                                    <TSDiv tag="span" className="font-semibold text-base text-gray-900">{peer.host}</TSDiv>
+                                    <TSDiv tag="span" className="font-semibold text-base">{peer.host}</TSDiv>
                                     {peer.isProbing && <TSDiv tag="span" className="inline-block text-sm animation-spin">⟳</TSDiv>}
                                 </TSDiv>
                                 <TSDiv className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export function PeersView({ onPeerPress }: PeersViewProps) {
 
                             {peer.reposWithBranches && peer.reposWithBranches.length > 0 && (
                                 <TSDiv className="text-sm space-y-2 mt-2">
-                                    <TSDiv className="font-semibold text-gray-600">Repositories:</TSDiv>
+                                    <TSDiv className="font-semibold">Repositories:</TSDiv>
                                     <TSDiv className="space-y-2 pl-2">
                                         {peer.reposWithBranches.map((repo) => (
                                             <TSDiv key={repo.name} className="space-y-1">
@@ -208,7 +208,7 @@ export function PeersView({ onPeerPress }: PeersViewProps) {
                                                 </TSDiv>
                                                 <TSDiv className="space-y-1 pl-2">
                                                     {Object.entries(repo.branches).map(([branch, commit]) => (
-                                                        <TSDiv key={branch} className="flex items-center gap-2 text-xs text-gray-600">
+                                                        <TSDiv key={branch} className="flex items-center gap-2 text-xs">
                                                             <TSDiv tag="span" className="font-semibold">{branch}:</TSDiv>
                                                             <TSDiv tag="code" className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">
                                                                 {commit.substring(0, 7)}

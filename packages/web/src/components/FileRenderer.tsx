@@ -10,7 +10,8 @@ export function FileRenderer({ content, contentType }: FileRendererProps) {
   const lower = (contentType || '').toLowerCase()
 
   if (lower.includes('markdown') || lower.includes('md')) {
-    return <MarkdownRenderer content={content} navigate={() => { }} />
+    return <MarkdownRenderer content={content} navigate={() => {
+    }} />
   }
 
   if (lower.startsWith('image/')) {
@@ -28,9 +29,11 @@ export function FileRenderer({ content, contentType }: FileRendererProps) {
     let pretty: string = content
     try {
       pretty = JSON.stringify(JSON.parse(content), null, 2)
-    } catch { }
+    } catch (e) {
+      console.debug('Failed to parse JSON:', e)
+    }
     return (
-      <TSDiv tag="pre" className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
+      <TSDiv tag="pre">
         {pretty}
       </TSDiv>
     )
@@ -38,7 +41,7 @@ export function FileRenderer({ content, contentType }: FileRendererProps) {
 
   if (lower.startsWith('text/') || !lower) {
     return (
-      <TSDiv tag="pre" className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
+      <TSDiv tag="pre">
         {content}
       </TSDiv>
     )
@@ -46,7 +49,7 @@ export function FileRenderer({ content, contentType }: FileRendererProps) {
 
   // Fallback: show as plain text
   return (
-    <TSDiv tag="pre" className="bg-[var(--bg-code)] border rounded p-4 overflow-auto text-sm text-[var(--text-code)]">
+    <TSDiv tag="pre">
       {content}
     </TSDiv>
   )

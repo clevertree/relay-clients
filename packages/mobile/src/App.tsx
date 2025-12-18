@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, type ComponentProps } from 'react'
-import { StatusBar, useWindowDimensions } from 'react-native'
+import { StatusBar, useWindowDimensions, Appearance } from 'react-native'
 import { TSDiv } from './components/TSDiv'
 import { NavigationContainer, useIsFocused } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -11,6 +11,7 @@ import { useAppUpdate } from './hooks/useAppUpdate'
 import { UpdateModal } from './components/UpdateModal'
 import { initNativeRustTranspiler } from './nativeRustTranspiler'
 import { initNativeThemedStyler } from './nativeThemedStyler'
+import { unifiedBridge } from '@clevertree/relay-client-shared'
 
 type RootStackParamList = {
   Main: undefined
@@ -80,11 +81,33 @@ const MainScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const openTab = useAppState((s) => s.openTab)
   const activeTabId = useAppState((s) => s.activeTabId)
   const homeTabId = useAppState((s) => s.homeTabId)
+  const theme = useAppState((s) => s.theme)
+  const setTheme = useAppState((s) => s.setTheme)
   const { width } = useWindowDimensions()
   const isTablet = width >= 768
   const { showUpdateModal, setShowUpdateModal, checkForUpdate } = useAppUpdate()
   const isScreenFocused = useIsFocused()
   const lastViewRef = useRef<string | null>(null)
+
+  // Apply theme on mount and when theme changes
+  useEffect(() => {
+    if (unifiedBridge.setCurrentTheme) {
+      unifiedBridge.setCurrentTheme(theme)
+    }
+  }, [theme])
+
+  // Listen for OS theme changes and update if no user preference is set
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      // Only auto-switch if user hasn't explicitly set a theme preference
+      // (We could track this with another flag in the store if needed)
+      console.log('[MainScreen] OS theme changed to:', colorScheme)
+    })
+
+    return () => {
+      subscription.remove()
+    }
+  }, [])
 
   useEffect(() => {
     const mode = isScreenFocused && (!activeTabId || activeTabId === homeTabId) ? 'home' : activeTabId === 'debug' ? 'debug' : 'repo'

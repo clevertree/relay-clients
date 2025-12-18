@@ -1,9 +1,6 @@
-import React, { useContext, useMemo, useEffect } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { StyleProp, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import { unifiedBridge } from '@relay/shared'
-
-type HierNode = { tag: string; classes: string[] }
-const HierarchyContext = React.createContext<HierNode[]>([])
 
 function parseClassName(className?: string) {
     if (!className || typeof className !== 'string') return []
@@ -11,25 +8,18 @@ function parseClassName(className?: string) {
 }
 
 export function useThemedStyles(tag: string, className?: string) {
-    const parentHierarchy = useContext(HierarchyContext)
     const classes = useMemo(() => parseClassName(className), [className])
-    const node = useMemo(() => ({ tag, classes }), [tag, className])
-    const hierarchy = useMemo(() => [...parentHierarchy, node], [parentHierarchy, node])
 
     useEffect(() => {
         try {
-            unifiedBridge.registerUsage(tag, { className }, hierarchy)
-            const hierarchySummary = hierarchy
-                .map((n) => `${n.tag}${n.classes.length ? `.${n.classes.join('.')}` : ''}`)
-                .join(' > ')
-            console.log('[TSDiv] registerUsage', { tag, className, hierarchy: hierarchySummary })
+            unifiedBridge.registerUsage(tag, { className })
         } catch (e) {
             console.warn('[TSDiv] registerUsage failed', e)
         }
-    }, [tag, className, hierarchy])
+    }, [tag, className])
 
     const style = classes.length ? (unifiedBridge.getRnStyles(tag, classes) as StyleProp<any>) : undefined
-    return { style, hierarchy }
+    return { style }
 }
 
 type ThemedElementProps = {
@@ -42,14 +32,12 @@ type ThemedElementProps = {
 
 export const ThemedElement = React.forwardRef<any, ThemedElementProps>(
     ({ component: Component, tag = 'div', className, style, children, ...rest }, ref) => {
-        const { style: themedStyle, hierarchy } = useThemedStyles(tag, className)
+        const { style: themedStyle } = useThemedStyles(tag, className)
         const mergedStyle = themedStyle ? [themedStyle, style] : style
         return (
-            <HierarchyContext.Provider value={hierarchy}>
-                <Component ref={ref} style={mergedStyle} {...rest}>
-                    {children}
-                </Component>
-            </HierarchyContext.Provider>
+            <Component ref={ref} style={mergedStyle} {...rest}>
+                {children}
+            </Component>
         )
     },
 )

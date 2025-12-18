@@ -13,13 +13,15 @@
   },
   "dependencies": {
     "@babel/standalone": "^7.26.2",
+    "@clevertree/relay-client-shared": "file:../shared",
     "markdown-to-jsx": "^9.3.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
+    "react-native": "^0.83.0",
     "remark-gfm": "^4.0.1",
-    "zustand": "^5.0.9",
-    "@clevertree/relay-client-shared": "file:../shared"
+    "yaml": "^2.8.2",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -28,6 +30,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.22",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -36,7 +39,6 @@
     "postcss": "^8.5.6",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "@vitejs/plugin-react": "^5.1.2",
     "vite": "^7.3.0",
     "vite-plugin-wasm": "^3.5.0"
   }

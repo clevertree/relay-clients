@@ -54,10 +54,10 @@ function StatusDisplay({ status, message, progress }: { status: LoadingStatus; m
         <TSDiv tag="span" className="text-lg">{getStatusIcon(status)}</TSDiv>
         <TSDiv tag="span" className="font-semibold">{statusLabel}</TSDiv>
         {progress !== undefined && progress < 100 && (
-          <TSDiv tag="span" className="text-xs text-gray-400">({progress}%)</TSDiv>
+          <TSDiv tag="span" className="text-xs">({progress}%)</TSDiv>
         )}
       </TSDiv>
-      <TSDiv className="text-xs text-gray-400">{message}</TSDiv>
+      <TSDiv className="text-xs">{message}</TSDiv>
       {progress !== undefined && progress < 100 && (
         <TSDiv className="w-full h-1 bg-gray-700 rounded-full overflow-hidden">
           <TSDiv className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${progress}%` }} />
@@ -182,11 +182,11 @@ export function VideoPlayer({
     // Render a disabled placeholder UI but keep all internal state/hooks available so
     // re-enabling the feature is non-destructive and fast.
     return (
-      <TSDiv className={`w-full max-w-4xl rounded-lg border border-dashed bg-black/60 text-gray-300 p-6 ${className || ''}`} style={style}>
+      <TSDiv className={`w-full max-w-4xl rounded-lg border border-dashed bg-black/60 p-6 ${className || ''}`} style={style}>
         <TSDiv className="text-center space-y-2">
           <TSDiv className="text-lg font-semibold">Video playback temporarily disabled</TSDiv>
-          <TSDiv className="text-sm text-gray-400">The VideoPlayer UI is currently disabled while we stabilize streaming. The underlying loader and playback code remain present and will be used when re-enabled.</TSDiv>
-          <TSDiv className="text-xs text-gray-500">Tip: set <TSDiv tag="code">window.__videoEnabled = true</TSDiv> in the console to re-enable for testing.</TSDiv>
+          <TSDiv className="text-sm">The VideoPlayer UI is currently disabled while we stabilize streaming. The underlying loader and playback code remain present and will be used when re-enabled.</TSDiv>
+          <TSDiv className="text-xs">Tip: set <TSDiv tag="code">window.__videoEnabled = true</TSDiv> in the console to re-enable for testing.</TSDiv>
         </TSDiv>
       </TSDiv>
     )

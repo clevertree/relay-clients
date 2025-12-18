@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useAppState } from '../state/store'
 import { RepoFetchProvider } from '../context/RepoFetchContext'
 import HookRenderer from './HookRenderer'
-import StyleDebugPanel from './StyleDebugPanel'
 import ErrorBoundary from './ErrorBoundary'
 import { TSDiv } from './TSDiv'
 
@@ -277,15 +276,8 @@ export function RepoBrowser({ tabId }: RepoBrowserProps) {
                 <ErrorBoundary>
                     <TSDiv className="flex-1 overflow-y-auto">
 
-                        {/* Development-only style debug panel */}
-                        {import.meta.env?.DEV && (
-                            <TSDiv className="p-4">
-                                <StyleDebugPanel />
-                            </TSDiv>
-                        )}
-
                         {loading &&
-                            <TSDiv className="flex items-center justify-center h-full text-gray-500">Loading...</TSDiv>}
+                            <TSDiv className="flex items-center justify-center h-full">Loading...</TSDiv>}
 
                         {error && (
                             <TSDiv
@@ -544,8 +536,8 @@ export function RepoBrowser({ tabId }: RepoBrowserProps) {
                         onClick={handleGitPull}
                         disabled={isPulling}
                         className={`px-4 py-2 rounded text-sm font-medium transition ${isPulling
-                                ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                             }`}
                         title={isPulling ? 'Pulling updates...' : 'Pull latest updates from origin'}
                     >

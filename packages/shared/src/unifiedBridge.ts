@@ -23,6 +23,7 @@ const unifiedBridge = {
   registerTheme: themedStylerBridge.registerTheme,
   setCurrentTheme: themedStylerBridge.setCurrentTheme,
   getThemes: themedStylerBridge.getThemes,
+  getThemeList: themedStylerBridge.getThemeList,
   getCssForWeb: themedStylerBridge.getCssForWeb,
   getRnStyles: themedStylerBridge.getRnStyles,
 }

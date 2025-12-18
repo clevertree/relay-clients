@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
 
 export type PeerProtocol = 'https' | 'git' | 'ssh' | 'ipfs-api' | 'ipfs-gateway' | 'ipfs-swarm';
 
@@ -32,6 +33,8 @@ export type TabInfo = {
     isHome?: boolean;
 };
 
+export type ThemeName = 'default' | 'light' | 'dark';
+
 export type AppState = {
     // Peers state
     peers: PeerInfo[];
@@ -50,6 +53,10 @@ export type AppState = {
     updateTab: (tabId: string, updater: (t: TabInfo) => TabInfo) => void;
     homeTabId: string;
 
+    // Theme state
+    theme: ThemeName;
+    setTheme: (theme: ThemeName) => void;
+
     // Auto-refresh state
     autoRefreshEnabled: boolean;
     setAutoRefresh: (enabled: boolean) => void;
@@ -67,6 +74,7 @@ function generateTabId(): string {
 const STORAGE_KEY_TABS = 'relay_tabs';
 const STORAGE_KEY_ACTIVE_TAB = 'relay_active_tab';
 const STORAGE_KEY_PEERS = 'relay_peers';
+const STORAGE_KEY_THEME = 'relay_theme';
 
 // Load persisted state from AsyncStorage
 async function loadPersistedTabs(): Promise<TabInfo[]> {
@@ -115,6 +123,42 @@ async function persistPeers(peers: PeerInfo[]) {
         await AsyncStorage.setItem(STORAGE_KEY_PEERS, JSON.stringify(peerHosts));
     } catch (e) {
         console.error('Failed to persist peers:', e);
+    }
+}
+
+function detectOsThemePreference(): ThemeName {
+    // Use React Native's Appearance API to detect OS theme preference
+    try {
+        const colorScheme = Appearance.getColorScheme();
+        if (colorScheme === 'dark') {
+            return 'dark';
+        } else if (colorScheme === 'light') {
+            return 'light';
+        }
+    } catch (e) {
+        console.error('Failed to detect OS theme preference:', e);
+    }
+    return 'default';
+}
+
+async function loadPersistedTheme(): Promise<ThemeName> {
+    try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY_THEME);
+        if (stored && (stored === 'default' || stored === 'light' || stored === 'dark')) {
+            return stored as ThemeName;
+        }
+    } catch (e) {
+        console.error('Failed to load persisted theme:', e);
+    }
+    // If no user preference, use OS preference
+    return detectOsThemePreference();
+}
+
+async function persistTheme(theme: ThemeName) {
+    try {
+        await AsyncStorage.setItem(STORAGE_KEY_THEME, theme);
+    } catch (e) {
+        console.error('Failed to persist theme:', e);
     }
 }
 
@@ -207,6 +251,19 @@ export const useAppState = create<AppState>((set, get) => ({
             };
         }),
 
+    // Theme state
+    theme: 'default', // Will be loaded async in initialization
+    setTheme: async (theme) => {
+        await persistTheme(theme);
+        set({ theme });
+        // Apply theme via unifiedBridge
+        import('@clevertree/relay-client-shared').then(({ unifiedBridge }) => {
+            if (unifiedBridge.setCurrentTheme) {
+                unifiedBridge.setCurrentTheme(theme);
+            }
+        }).catch(console.error);
+    },
+
     // Auto-refresh state
     autoRefreshEnabled: false,
     setAutoRefresh: (enabled) =>
@@ -222,8 +279,9 @@ export const useAppState = create<AppState>((set, get) => ({
     try {
         let tabs = await loadPersistedTabs();
         let activeTabId = await loadPersistedActiveTab();
+        let theme = await loadPersistedTheme();
 
-        console.log('[Store] Loaded tabs:', tabs.length, 'activeTabId:', activeTabId);
+        console.log('[Store] Loaded tabs:', tabs.length, 'activeTabId:', activeTabId, 'theme:', theme);
 
         // Ensure at least a home tab exists if tabs is empty
         if (tabs.length === 0) {
@@ -252,7 +310,7 @@ export const useAppState = create<AppState>((set, get) => ({
         }
 
         console.log('[Store] Setting state with tabs:', tabs.map(t => t.id));
-        useAppState.setState({ tabs, activeTabId });
+        useAppState.setState({ tabs, activeTabId, theme });
     } catch (e) {
         console.error('[Store] Failed to initialize persisted state:', e);
         // Ensure at least a basic home tab is present so the UI can render
@@ -260,7 +318,8 @@ export const useAppState = create<AppState>((set, get) => ({
             tabs: [
                 { id: 'home', title: 'Home', isHome: true }
             ],
-            activeTabId: 'home'
+            activeTabId: 'home',
+            theme: 'default'
         });
     }
 })();

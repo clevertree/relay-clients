@@ -12,12 +12,13 @@ import {
 import { unifiedBridge, ensureDefaultsLoaded } from '@relay/shared'
 import HookRenderer from './HookRenderer'
 import { useRNTranspilerSetting } from '../state/transpilerSettings'
+import { useAppState } from '../state/store'
 import { styled } from '../themedRuntime'
 
-type ThemesState = { themes?: Record<string, any>; currentTheme?: string } | null
-type UsageSnapshot = { selectors: string[]; classes: string[] }
+type ThemesState = { themes?: Record<string, unknown>; currentTheme?: string } | null
+type UsageSnapshot = { tags: string[]; classes: string[]; tagClasses: string[] }
 const themedStylerCrateVersion = '0.1.4'
-const getGlobalRuntimeVersion = () => (typeof globalThis !== 'undefined' ? String((globalThis as any).__themedStyler_version ?? 'unavailable') : 'unavailable')
+const getGlobalRuntimeVersion = () => (typeof globalThis !== 'undefined' ? String((globalThis as Record<string, unknown>).__themedStyler_version ?? 'unavailable') : 'unavailable')
 
 function buildFullState(usage: UsageSnapshot, themesState: ThemesState) {
   const themesMap = themesState && typeof themesState.themes === 'object' ? themesState.themes : {}
@@ -29,8 +30,9 @@ function buildFullState(usage: UsageSnapshot, themesState: ThemesState) {
     current_theme: current,
     variables: {},
     breakpoints: {},
-    used_selectors: usage.selectors,
+    used_tags: usage.tags,
     used_classes: usage.classes,
+    used_tagClasses: usage.tagClasses,
   }
 }
 
@@ -59,7 +61,7 @@ const ThemedRuntimeTest: React.FC = () => (
   <ThemedView className="mb-3">
     <ThemedView className="mb-2">
       <ThemedText className="font-bold mb-1">Runtime diagnostics</ThemedText>
-      <ThemedText className="text-xs text-gray-600">Styled helper present: {String(typeof styled === 'function')}</ThemedText>
+      <ThemedText className="text-xs">Styled helper present: {String(typeof styled === 'function')}</ThemedText>
     </ThemedView>
     <ThemedText className="font-semibold mb-2">ClassName test</ThemedText>
     <ThemedView className="p-2 rounded border">
@@ -90,6 +92,8 @@ const ThemedRuntimeTest: React.FC = () => (
 const DebugTab: React.FC = () => {
   const mode = useRNTranspilerSetting((s) => s.mode)
   const setMode = useRNTranspilerSetting((s) => s.setMode)
+  const theme = useAppState((s) => s.theme)
+  const setTheme = useAppState((s) => s.setTheme)
   const [host, setHost] = useState<string>('https://node-dfw1.relaynet.online')
   const [usageSnapshot, setUsageSnapshot] = useState<UsageSnapshot>(() => unifiedBridge.getUsageSnapshot())
   const [themesState, setThemesState] = useState<ThemesState>(() =>
@@ -102,7 +106,7 @@ const DebugTab: React.FC = () => {
       setUsageSnapshot(unifiedBridge.getUsageSnapshot())
     } catch (err) {
       console.warn('[DebugTab] Failed to sample themed-styler usage', err)
-      setUsageSnapshot({ selectors: [], classes: [] })
+      setUsageSnapshot({ tags: [], classes: [], tagClasses: [] })
     }
     try {
       const themes = typeof unifiedBridge.getThemes === 'function' ? unifiedBridge.getThemes() : null
@@ -125,16 +129,16 @@ const DebugTab: React.FC = () => {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        await ensureDefaultsLoaded()
-      } catch (err) {
-        console.warn('[DebugTab] Failed to load themed-styler defaults', err)
-      }
-      if (mounted) {
-        refreshStats()
-      }
-    })()
+      ; (async () => {
+        try {
+          await ensureDefaultsLoaded()
+        } catch (err) {
+          console.warn('[DebugTab] Failed to load themed-styler defaults', err)
+        }
+        if (mounted) {
+          refreshStats()
+        }
+      })()
     return () => {
       mounted = false
     }
@@ -169,7 +173,7 @@ const DebugTab: React.FC = () => {
         <ThemedView className="space-y-3">
           <JsonBlock label="Full state" value={fullState} />
           <JsonBlock label="Usage snapshot" value={usageSnapshot} />
-          <JsonBlock label="Selectors processed" value={usageSnapshot.selectors} />
+          <JsonBlock label="Tags processed" value={usageSnapshot.tags} />
           <JsonBlock label="Classes processed" value={usageSnapshot.classes} />
           <JsonBlock label="CSS fallback" value={cssTrace} />
         </ThemedView>
@@ -188,6 +192,35 @@ const DebugTab: React.FC = () => {
         </ThemedView>
         <ThemedView className="rounded p-3 mt-3" style={{ backgroundColor: '#f5fff5', borderLeftWidth: 4, borderLeftColor: '#34c759' }}>
           <ThemedText className="text-sm font-mono" style={{ color: '#333' }}>Current mode: {mode}</ThemedText>
+        </ThemedView>
+      </ThemedView>
+
+      {/* Theme Settings */}
+      <ThemedView className="mb-6 bg-white rounded p-4" style={{ shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 }}>
+        <ThemedText className="text-base font-bold mb-3" style={{ color: '#333' }}>🎨 Theme Settings</ThemedText>
+        <ThemedText className="text-sm" style={{ color: '#333', lineHeight: 18 }}>Choose your preferred color theme.</ThemedText>
+        <ThemedView className="flex-row mt-3" style={{ columnGap: 12, flexWrap: 'wrap' }}>
+          <ThemedTouchableOpacity
+            className={`px-4 py-2 rounded my-2 ${theme === 'default' ? 'bg-primary' : 'bg-gray-300'}`}
+            onPress={() => setTheme('default')}
+          >
+            <ThemedText className="text-white text-sm font-semibold">Default</ThemedText>
+          </ThemedTouchableOpacity>
+          <ThemedTouchableOpacity
+            className={`px-4 py-2 rounded my-2 ${theme === 'light' ? 'bg-primary' : 'bg-gray-300'}`}
+            onPress={() => setTheme('light')}
+          >
+            <ThemedText className="text-white text-sm font-semibold">Light</ThemedText>
+          </ThemedTouchableOpacity>
+          <ThemedTouchableOpacity
+            className={`px-4 py-2 rounded my-2 ${theme === 'dark' ? 'bg-primary' : 'bg-gray-300'}`}
+            onPress={() => setTheme('dark')}
+          >
+            <ThemedText className="text-white text-sm font-semibold">Dark</ThemedText>
+          </ThemedTouchableOpacity>
+        </ThemedView>
+        <ThemedView className="rounded p-3 mt-3" style={{ backgroundColor: '#f5fff5', borderLeftWidth: 4, borderLeftColor: '#34c759' }}>
+          <ThemedText className="text-sm font-mono" style={{ color: '#333' }}>Current theme: {theme}</ThemedText>
         </ThemedView>
       </ThemedView>
 

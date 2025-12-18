@@ -1,8 +1,12 @@
-import { registerTheme as registerThemedStyles } from '../../../../apps/shared/src/themedStylerBridge'
+import { unifiedBridge } from '@relay/shared'
 
-export function registerThemeStyles(themeName: string, definitions?: Record<string, any>) {
+export function registerThemeStyles(themeName: string, definitions?: Record<string, unknown>) {
     if (!themeName || !definitions) return
-    try { registerThemedStyles(themeName, definitions) } catch (e) { }
+    try {
+        unifiedBridge.registerTheme(themeName, definitions)
+    } catch (e) {
+        console.debug('Failed to register theme:', e)
+    }
 }
 
 export function setThemedStylerDebug(enabled: boolean) {

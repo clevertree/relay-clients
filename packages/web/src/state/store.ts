@@ -1,4 +1,4 @@
-import {create} from 'zustand'
+import { create } from 'zustand'
 
 export type PeerProtocol = 'https' | 'git' | 'ssh' | 'ipfs-api' | 'ipfs-gateway' | 'ipfs-swarm'
 
@@ -32,6 +32,8 @@ export interface TabInfo {
     isHome?: boolean
 }
 
+export type ThemeName = 'default' | 'light' | 'dark'
+
 export interface AppState {
     // Peers state
     peers: PeerInfo[]
@@ -50,6 +52,10 @@ export interface AppState {
     updateTab: (tabId: string, updater: (t: TabInfo) => TabInfo) => void
     homeTabId: string
 
+    // Theme state
+    theme: ThemeName
+    setTheme: (theme: ThemeName) => void
+
     // Auto-refresh state
     autoRefreshEnabled: boolean
     setAutoRefresh: (enabled: boolean) => void
@@ -67,6 +73,7 @@ function generateTabId(): string {
 const STORAGE_KEY_TABS = 'relay_tabs'
 const STORAGE_KEY_ACTIVE_TAB = 'relay_active_tab'
 const STORAGE_KEY_PEERS = 'relay_peers'
+const STORAGE_KEY_THEME = 'relay_theme'
 
 // Load persisted state from localStorage
 function ensureCoreTabs(tabs: TabInfo[]): TabInfo[] {
@@ -133,12 +140,44 @@ function persistPeers(peers: PeerInfo[]) {
     }
 }
 
+function detectOsThemePreference(): ThemeName {
+    try {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            return 'dark'
+        }
+    } catch (e) {
+        console.error('Failed to detect OS theme preference:', e)
+    }
+    return 'default'
+}
+
+function loadPersistedTheme(): ThemeName {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY_THEME)
+        if (stored && (stored === 'default' || stored === 'light' || stored === 'dark')) {
+            return stored as ThemeName
+        }
+    } catch (e) {
+        console.error('Failed to load persisted theme:', e)
+    }
+    // If no user preference, use OS preference
+    return detectOsThemePreference()
+}
+
+function persistTheme(theme: ThemeName) {
+    try {
+        localStorage.setItem(STORAGE_KEY_THEME, theme)
+    } catch (e) {
+        console.error('Failed to persist theme:', e)
+    }
+}
+
 export const useAppState = create<AppState>((set, get) => ({
     // Peers state
     peers: [],
     setPeers: (hosts) =>
         set(() => {
-            const newPeers = hosts.map((h) => ({host: h, probes: []}))
+            const newPeers = hosts.map((h) => ({ host: h, probes: [] }))
             persistPeers(newPeers)
             return {
                 peers: newPeers,
@@ -150,7 +189,7 @@ export const useAppState = create<AppState>((set, get) => ({
         })),
     setPeerProbing: (host, isProbing) =>
         set((s) => ({
-            peers: s.peers.map((p) => (p.host === host ? {...p, isProbing} : p)),
+            peers: s.peers.map((p) => (p.host === host ? { ...p, isProbing } : p)),
         })),
     addPeer: (host) =>
         set((s) => {
@@ -161,7 +200,7 @@ export const useAppState = create<AppState>((set, get) => ({
             if (s.peers.some((p) => p.host === cleanHost)) {
                 return s
             }
-            const newPeers = [...s.peers, {host: cleanHost, probes: []}]
+            const newPeers = [...s.peers, { host: cleanHost, probes: [] }]
             persistPeers(newPeers)
             return {
                 peers: newPeers,
@@ -183,7 +222,7 @@ export const useAppState = create<AppState>((set, get) => ({
     openTab: (host, path = '/') => {
         const existingTab = get().tabs.find((t) => t.host === host && t.path === path)
         if (existingTab) {
-            set({activeTabId: existingTab.id})
+            set({ activeTabId: existingTab.id })
             persistTabs(get().tabs, existingTab.id)
             return existingTab.id
         }
@@ -212,10 +251,10 @@ export const useAppState = create<AppState>((set, get) => ({
             const tabs = s.tabs.filter((t) => t.id !== tabId)
             const activeTabId = s.activeTabId === tabId ? (tabs.find((t) => t.id === 'home') ?? tabs[0])?.id || 'home' : s.activeTabId
             persistTabs(tabs, activeTabId || 'home')
-            return {tabs, activeTabId}
+            return { tabs, activeTabId }
         }),
     setActiveTab: (tabId) => {
-        set({activeTabId: tabId})
+        set({ activeTabId: tabId })
         persistTabs(get().tabs, tabId)
     },
     updateTab: (tabId, updater) =>
@@ -227,11 +266,24 @@ export const useAppState = create<AppState>((set, get) => ({
             }
         }),
 
+    // Theme state
+    theme: loadPersistedTheme(),
+    setTheme: (theme) => {
+        persistTheme(theme)
+        set({ theme })
+        // Apply theme via unifiedBridge
+        import('@clevertree/relay-client-shared').then(({ unifiedBridge }) => {
+            if (unifiedBridge.setCurrentTheme) {
+                unifiedBridge.setCurrentTheme(theme)
+            }
+        }).catch(console.error)
+    },
+
     // Auto-refresh state
     autoRefreshEnabled: false,
     setAutoRefresh: (enabled) =>
-        set({autoRefreshEnabled: enabled}),
+        set({ autoRefreshEnabled: enabled }),
     lastRefreshTs: 0,
     setLastRefreshTs: (ts) =>
-        set({lastRefreshTs: ts}),
+        set({ lastRefreshTs: ts }),
 }))
