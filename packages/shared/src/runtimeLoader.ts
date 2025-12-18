@@ -45,12 +45,13 @@ export interface HookContext {
  * Helper functions available to hooks
  */
 export interface HookHelpers {
-  navigate: (path: string) => void
+  navigate?: never // ❌ Removed: Repos manage their own routing via React state
   buildPeerUrl: (path: string) => string
-  loadModule: (modulePath: string) => Promise<any>
+  loadModule: (modulePath: string, fromPath?: string) => Promise<any>
   setBranch?: (branch: string) => void
   buildRepoHeaders?: (branch?: string, repo?: string) => Record<string, string>
   registerThemeStyles?: (themeName: string, definitions?: Record<string, unknown>) => void
+  registerThemesFromYaml?: (path: string) => Promise<void>
 }
 
 /**
@@ -92,6 +93,26 @@ export class WebModuleLoader implements ModuleLoader {
     try {
       // Set global context for JSX transpiled code
       ; (window as any).__ctx__ = context
+        // Provide a stable global import-with shim that never changes across modules
+        ; (window as any).__hook_import_with = async (spec: string, fromFile: string) => {
+          try {
+            const dbg = (globalThis as any).__HOOK_DEBUG || (typeof localStorage !== 'undefined' && localStorage.getItem('hookDebug') === '1')
+            if (dbg) {
+              try { console.debug('[__hook_import_with] spec=', spec, 'fromFile=', fromFile) } catch { }
+            }
+            const fn = (context && context.helpers && typeof context.helpers.loadModule === 'function') ? context.helpers.loadModule : null
+            if (!fn) throw new Error('__hook_import_with unavailable: helpers.loadModule not available')
+            return await fn(spec, fromFile)
+          } catch (e) {
+            console.error('[WebModuleLoader] __hook_import_with failed for', spec, 'from', fromFile, e)
+            throw e
+          }
+        }
+
+      // Build a per-module alias that binds the caller filename. This ensures any
+      // rewritten calls to __hook_import(spec) inside this module resolve relative
+      // to this file, regardless of other modules being loaded later.
+      const perModuleAlias = `const __hook_import = (spec) => (globalThis.__hook_import_with ? globalThis.__hook_import_with(String(spec), ${JSON.stringify(filename)}) : Promise.reject(new Error('__hook_import_with not available')));\n`
 
       // If the transpiled code contains ESM export syntax, evaluate it as an ES module
       // by creating a blob and dynamic-importing it. This allows transpilers that emit
@@ -100,14 +121,38 @@ export class WebModuleLoader implements ModuleLoader {
       const looksLikeESM = /\bexport\b/.test(code)
       if (looksLikeESM) {
         try {
-          const blob = new Blob([code], { type: 'text/javascript' })
+          // Transpiler has already rewritten special imports (react, @relay/*, etc.) to use globals
+          // Just inject the per-module alias and execute
+          const blob = new Blob([perModuleAlias, code], { type: 'text/javascript' })
           const url = URL.createObjectURL(blob)
-          // Ensure context is available to module (transpiler may read window.__ctx__)
-          // Dynamic import will evaluate as a proper ES module.
-          // Use an indirect dynamic import constructed via Function so Metro
-          // transformer does not parse a static `import(...)` call during
-          // transform. Wrapping the import in a string avoids Metro's syntax
-          // checking while still performing a proper dynamic import at runtime.
+            // Ensure globals are available for module execution
+            ; (window as any).__hook_react = context.React
+          // Provide JSX runtime globals for transpiled output
+          const jsxFactory = (context.React && context.React.createElement) ? context.React.createElement.bind(context.React) : undefined
+          const fragmentFactory = (context.React && (context.React.Fragment || (context.React as any).Fragment)) ? (context.React.Fragment || (context.React as any).Fragment) : undefined
+            ; (window as any).__hook_jsx_runtime = { jsx: jsxFactory, jsxs: jsxFactory, Fragment: fragmentFactory }
+            ; (window as any).__jsx = jsxFactory
+            ; (window as any).__jsxs = jsxFactory
+            ; (window as any).__Fragment = fragmentFactory
+            ; (window as any).__hook_file_renderer = (context && context.FileRenderer) || null
+            ; (window as any).__hook_helpers = (context && context.helpers) || {}
+          console.log('[WebModuleLoader] Set globals before blob import:', {
+            hasReact: !!(window as any).__hook_react,
+            hasJsxRuntime: !!(window as any).__hook_jsx_runtime,
+            hasFileRenderer: !!(window as any).__hook_file_renderer,
+            hasHelpers: !!(window as any).__hook_helpers,
+            filename
+          })
+          // Small delay to ensure globals are set before blob execution
+          await new Promise(resolve => setTimeout(resolve, 0))
+            // Ensure context is available to module (transpiler may read window.__ctx__)
+            // Dynamic import will evaluate as a proper ES module.
+            // Use an indirect dynamic import constructed via Function so Metro
+            // transformer does not parse a static `import(...)` call during
+            // transform. Wrapping the import in a string avoids Metro's syntax
+            // checking while still performing a proper dynamic import at runtime.
+            // Track current module path for nested lazy loads
+            ; (window as any).__currentModulePath = filename
           const dynImport = new Function('u', 'return import(u)')
           const ns = await dynImport(url)
           // Clean up blob URL
@@ -131,6 +176,7 @@ export class WebModuleLoader implements ModuleLoader {
         'context',
         `
 try {
+  ${perModuleAlias}
   ${code}
 } catch (err) {
   console.error('[WebModuleLoader] Code execution error in ${filename}:', err.message || err);
@@ -139,20 +185,59 @@ try {
         `
       )
 
-      // Execute the module code
+        // Execute the module code
+        // Track current module path for nested lazy loads
+        ; (window as any).__currentModulePath = filename
       fn(
         (spec: string) => {
-          // Basic require shim for web
+          // Require shim: intercept special module names to return context values
           if (spec === 'react') {
-            // eslint-disable-next-line no-undef
-            return (window as any).React || {}
+            return context.React || {}
           }
+          if (spec === '@relay/helpers') {
+            return context.helpers || {}
+          }
+          if (spec === '@relay/file-renderer') {
+            return context.FileRenderer || (() => null)
+          }
+          if (spec === '@relay/layout') {
+            return context.Layout || null
+          }
+          if (spec === '@relay/markdown') {
+            return (context as any).__relay_builtins?.['@relay/markdown'] || (globalThis as any).__relay_builtins?.['@relay/markdown'] || {}
+          }
+          if (spec === '@relay/theme') {
+            return (context as any).__relay_builtins?.['@relay/theme'] || (globalThis as any).__relay_builtins?.['@relay/theme'] || {}
+          }
+          if (spec === 'react/jsx-runtime') {
+            const r: any = context.React || (globalThis as any).__hook_react || (globalThis as any).React || {}
+            return {
+              jsx: r.createElement ? r.createElement.bind(r) : undefined,
+              jsxs: r.createElement ? r.createElement.bind(r) : undefined,
+              Fragment: r.Fragment,
+            }
+          }
+          // Fallback for other requires
           return {}
         },
         module,
         exports,
         context
       )
+
+      // Ensure JSX runtime globals exist for modules executed via Function path
+      const jsxFactory = context.React?.createElement ? context.React.createElement.bind(context.React) : undefined
+      const fragmentFactory = context.React?.Fragment
+      if (!(globalThis as any).__hook_jsx_runtime) {
+        ; (globalThis as any).__hook_jsx_runtime = { jsx: jsxFactory, jsxs: jsxFactory, Fragment: fragmentFactory }
+      }
+      if (!(globalThis as any).__jsx && jsxFactory) {
+        ; (globalThis as any).__jsx = jsxFactory
+          ; (globalThis as any).__jsxs = jsxFactory
+      }
+      if (!(globalThis as any).__Fragment && fragmentFactory) {
+        ; (globalThis as any).__Fragment = fragmentFactory
+      }
 
       // Return the module exports
       const mod = module.exports
@@ -165,6 +250,8 @@ try {
       // Clean up global after async operations may complete
       setTimeout(() => {
         delete (window as any).__ctx__
+        try { delete (window as any).__hook_import } catch { }
+        delete (window as any).__currentModulePath
       }, 500)
     }
   }
@@ -269,7 +356,17 @@ try {
         }
       }
 
+      // Expose global import shim for transpiled code
+      ; (globalThis as any).__currentModulePath = filename
+        ; (globalThis as any).__hook_import = importFn
+
       await fn(importFn, this.requireShim, module, exports, context)
+
+      // Cleanup globals after execution
+      setTimeout(() => {
+        try { delete (globalThis as any).__hook_import } catch { }
+        try { delete (globalThis as any).__currentModulePath } catch { }
+      }, 500)
 
       // Ensure module.exports and exports are in sync
       // If code modified exports, make sure it's reflected in module.exports
@@ -431,27 +528,78 @@ export async function transpileCode(
     throw callError
   }
 
-  console.log('[transpileCode] WASM transpilation returned', out.length, 'bytes')
+  // Handle WASM result object: { code: string | null, map: string | null, error: string | null }
+  let transpiledCode: string;
+  if (typeof out === 'object' && out !== null) {
+    if (out.error) {
+      // WASM returned an error
+      const errorMsg = `TranspileError: ${filename}: ${out.error} (v${version})`
+      console.error('[transpileCode] JSX transpilation failed:', {
+        filename,
+        inputSize: code.length,
+        errorMessage: errorMsg,
+        codePreview: code.substring(0, 200)
+      })
+        // Make transpiled code available for debugging
+        ; (globalThis as any).__lastTranspiledCode = null
+        ; (globalThis as any).__lastTranspileError = errorMsg
+
+      // Optional server fallback for user-enabled path
+      if ((g as any).__allowServerTranspile) {
+        console.warn('[transpileCode] WASM returned error; attempting server fallback')
+        try {
+          const resp = await fetch('/api/transpile', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ code, filename, to_common_js: false }),
+          } as any)
+          if (!resp.ok) {
+            const txt = await resp.text().catch(() => '')
+            throw new Error(`ServerTranspileError: ${resp.status} ${resp.statusText} ${txt}`)
+          }
+          const data: any = await resp.json()
+          if (!data?.ok || !data?.code) {
+            throw new Error(`ServerTranspileError: ${data?.diagnostics || 'unknown error'}`)
+          }
+          transpiledCode = String(data.code)
+          const rewritten = transpiledCode.replace(/\bimport\s*\(/g, 'context.helpers.loadModule(')
+          return rewritten + `\n//# sourceURL=${filename}`
+        } catch (e) {
+          console.error('[transpileCode] Server fallback failed after WASM error:', e)
+        }
+      }
+      throw new Error(errorMsg)
+    }
+
+    if (!out.code) {
+      throw new Error(`HookTranspiler returned empty code for ${filename}`)
+    }
+
+    transpiledCode = out.code
+  } else if (typeof out === 'string') {
+    // Legacy string return (shouldn't happen with current WASM, but handle it)
+    transpiledCode = out
+  } else {
+    throw new Error(`HookTranspiler returned unexpected type: ${typeof out}`)
+  }
+
+  console.log('[transpileCode] WASM transpilation returned', transpiledCode.length, 'bytes')
 
   // Log first 200 chars to see if transpilation happened
-  const sample = out.substring(0, 200);
+  const sample = transpiledCode.substring(0, 200);
   console.log('[transpileCode] Output sample:', sample)
 
   // IMPORTANT: Log larger sample for debugging
-  const largeSample = out.substring(0, 1500);
+  const largeSample = transpiledCode.substring(0, 1500);
   if (!largeSample.includes('TranspileError') && !largeSample.includes('<')) {
     console.log('[transpileCode] First 1500 chars (transpilation successful):', largeSample);
   } else if (largeSample.includes('<')) {
     console.warn('[transpileCode] WARNING: First 1500 chars STILL CONTAINS JSX:', largeSample.substring(0, 800));
   }
 
-  if (typeof out !== 'string') {
-    throw new Error('HookTranspiler returned non-string output')
-  }
-
   // Check if WASM returned a transpilation error
-  if (out.startsWith('TranspileError:')) {
-    const errorMsg = `${out} (v${version})`
+  if (transpiledCode.startsWith('TranspileError:')) {
+    const errorMsg = `${transpiledCode} (v${version})`
     console.error('[transpileCode] JSX transpilation failed:', {
       filename,
       inputSize: code.length,
@@ -459,7 +607,7 @@ export async function transpileCode(
       codePreview: code.substring(0, 200)
     })
       // Make transpiled code available for debugging
-      ; (globalThis as any).__lastTranspiledCode = out
+      ; (globalThis as any).__lastTranspiledCode = transpiledCode
       ; (globalThis as any).__lastTranspileError = errorMsg
     // Optional server fallback for user-enabled path
     if ((g as any).__allowServerTranspile) {
@@ -478,8 +626,8 @@ export async function transpileCode(
         if (!data?.ok || !data?.code) {
           throw new Error(`ServerTranspileError: ${data?.diagnostics || 'unknown error'}`)
         }
-        const out2 = String(data.code)
-        const rewritten = out2.replace(/\bimport\s*\(/g, 'context.helpers.loadModule(')
+        transpiledCode = String(data.code)
+        const rewritten = transpiledCode.replace(/\bimport\s*\(/g, 'context.helpers.loadModule(')
         return rewritten + `\n//# sourceURL=${filename}`
       } catch (e) {
         console.error('[transpileCode] Server fallback failed after TranspileError:', e)
@@ -489,20 +637,20 @@ export async function transpileCode(
   }
 
   // Store transpiled code for debugging
-  ; (globalThis as any).__lastTranspiledCode = out
+  ; (globalThis as any).__lastTranspiledCode = transpiledCode
 
   // Check if output still has JSX syntax (< followed by uppercase letter)
-  const stillHasJsx = /<[A-Z]/.test(out);
+  const stillHasJsx = /<[A-Z]/.test(transpiledCode);
   if (stillHasJsx) {
     console.warn('[transpileCode] WARNING: Output still contains JSX syntax! Transpilation may have failed silently.');
     console.warn('[transpileCode] Transpiled code available at: window.__lastTranspiledCode');
-  } else if (out.includes('h(')) {
-    console.log('[transpileCode] ✓ Output contains h() calls - transpilation successful')
+  } else if (transpiledCode.includes('React.createElement(')) {
+    console.log('[transpileCode] ✓ Output contains React.createElement() calls - transpilation successful')
   }
 
-  // Rewrite dynamic import() to helpers.loadModule()
-  const rewritten = out.replace(/\bimport\s*\(/g, 'context.helpers.loadModule(')
-  return rewritten + `\n//# sourceURL=${filename}`
+  // Rust transpiler already handles dynamic import() rewriting to __hook_import()
+  // No need for JS post-processing
+  return transpiledCode + `\n//# sourceURL=${filename}`
 }
 
 /**
@@ -572,6 +720,10 @@ export class HookLoader {
     // Resolve path robustly relative to the current hook file path
     let normalizedPath = modulePath
     try {
+      const dbg = (globalThis as any).__HOOK_DEBUG || (typeof localStorage !== 'undefined' && localStorage.getItem('hookDebug') === '1')
+      if (dbg) {
+        try { console.debug('[HookLoader.loadModule] start', { modulePath, fromPath }) } catch { }
+      }
       if (modulePath.startsWith('./') || modulePath.startsWith('../')) {
         // Ensure the base includes the 'client' segment by default
         const base = fromPath && fromPath.startsWith('/') ? fromPath : '/hooks/client/get-client.jsx'
@@ -581,12 +733,39 @@ export class HookLoader {
       } else if (!modulePath.startsWith('/')) {
         normalizedPath = `/hooks/client/${modulePath}`
       }
-      // Collapse any '/../' leftovers defensively
-      normalizedPath = normalizedPath.replace(/\/+/, '/').replace(/\/\.\//g, '/').replace(/(?:\/(?!\.\.)[^/]+\/\.\.)+/g, '/')
+      // Normalize path by resolving .. and . segments
+      const parts = normalizedPath.split('/').filter(Boolean)
+      const normalized: string[] = []
+      for (const part of parts) {
+        if (part === '..') {
+          normalized.pop()
+        } else if (part !== '.') {
+          normalized.push(part)
+        }
+      }
+      normalizedPath = '/' + normalized.join('/')
+      if (dbg) {
+        try { console.debug('[HookLoader.loadModule] normalized', { modulePath, fromPath, normalizedPath }) } catch { }
+      }
     } catch (_) {
       // Fallback to previous logic if URL API not available for some reason
       const baseDir = (fromPath || '/hooks/client/get-client.jsx').split('/').slice(0, -1).join('/') || '/hooks/client'
-      normalizedPath = `${baseDir}/${modulePath}`.replace(/\/\.\//g, '/').replace(/\/[^/]+\/\.\.\//g, '/')
+      const combined = `${baseDir}/${modulePath}`
+      // Normalize by resolving .. and . segments
+      const parts = combined.split('/').filter(Boolean)
+      const normalized: string[] = []
+      for (const part of parts) {
+        if (part === '..') {
+          normalized.pop()
+        } else if (part !== '.') {
+          normalized.push(part)
+        }
+      }
+      normalizedPath = '/' + normalized.join('/')
+      try {
+        const dbg2 = (globalThis as any).__HOOK_DEBUG || (typeof localStorage !== 'undefined' && localStorage.getItem('hookDebug') === '1')
+        if (dbg2) console.debug('[HookLoader.loadModule] normalized (fallback)', { modulePath, fromPath, normalizedPath })
+      } catch { }
     }
 
     // Check cache

@@ -3,7 +3,7 @@
 
 // NOTE: This expects the crate to be built for wasm32-unknown-unknown with wasm-bindgen,
 // and the JS glue to be available for import from /wasm/hook_transpiler.js (or similar).
-// For dev, you can place the generated files under apps/client-web/public/wasm/.
+// For dev, you can place the generated files under apps/client-web/src/wasm/.
 
 export async function initHookTranspilerWasm(): Promise<void> {
   // Delegate to consolidated wasm loader

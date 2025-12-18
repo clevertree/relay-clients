@@ -77,15 +77,19 @@ const STORAGE_KEY_THEME = 'relay_theme'
 
 // Load persisted state from localStorage
 function ensureCoreTabs(tabs: TabInfo[]): TabInfo[] {
-    // Always ensure Home and Settings tabs exist
+    // Always ensure Home, Settings, and Test tabs exist
     const hasHome = tabs.some((t) => t.id === 'home')
     const hasSettings = tabs.some((t) => t.id === 'settings')
+    const hasTest = tabs.some((t) => t.id === 'test')
     const result = [...tabs]
     if (!hasHome) {
         result.unshift({ id: 'home', title: 'Home', isHome: true })
     }
     if (!hasSettings) {
         result.push({ id: 'settings', title: 'Settings' })
+    }
+    if (!hasTest) {
+        result.push({ id: 'test', title: 'Test' })
     }
     return result
 }

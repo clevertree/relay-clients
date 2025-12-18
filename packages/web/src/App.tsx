@@ -4,6 +4,7 @@ import { PeersView } from './components/PeersView'
 import { TabBar } from './components/TabBar'
 import { RepoBrowser } from './components/RepoBrowser'
 import { SettingsTab } from './components/SettingsTab'
+import { TestTab } from './components/TestTab'
 import { PluginProvider } from './plugins/PluginContext'
 import { webPlugin } from './plugins/web'
 import { TSDiv } from './components/TSDiv.tsx'
@@ -41,6 +42,8 @@ function App() {
               <PeersView onPeerPress={handlePeerPress} />
             ) : activeTabId === 'settings' ? (
               <SettingsTab />
+            ) : activeTabId === 'test' ? (
+              <TestTab />
             ) : activeTabId ? (
               <RepoBrowser tabId={activeTabId} />
             ) : (

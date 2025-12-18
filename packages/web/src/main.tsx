@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client'
 import App from './App.tsx'
 // wasm loader consolidated in @clevertree/relay-client-shared
 import ErrorBoundary from './components/ErrorBoundary'
+import './index.css'
 
 async function bootstrap() {
     let initError: Error | undefined

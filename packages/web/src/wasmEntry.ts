@@ -15,6 +15,7 @@ export async function initAllClientWasms(): Promise<void> {
     // import wasm as url so Vite treats it as an asset URL
     // @ts-ignore
     const { default: hookWasmUrl } = await import('./wasm/hook_transpiler_bg.wasm?url')
+    console.log('[wasmEntry] Loading WASM from:', hookWasmUrl)
     if (hookMod && typeof hookMod.default === 'function') {
       try {
         await (hookMod as any).default(hookWasmUrl)
@@ -23,7 +24,9 @@ export async function initAllClientWasms(): Promise<void> {
       }
       if (typeof (hookMod as any).transpile_jsx === 'function') {
         ; (globalThis as any).__hook_transpile_jsx = (hookMod as any).transpile_jsx.bind(hookMod)
-          ; (globalThis as any).__hook_transpiler_version = (typeof (hookMod as any).get_version === 'function') ? (hookMod as any).get_version() : 'unknown'
+        const version = (typeof (hookMod as any).get_version === 'function') ? (hookMod as any).get_version() : 'unknown'
+          ; (globalThis as any).__hook_transpiler_version = version
+        console.log('[wasmEntry] hook-transpiler loaded, version:', version)
       }
     }
   } catch (e) {

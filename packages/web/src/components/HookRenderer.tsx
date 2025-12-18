@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HookLoader, WebModuleLoader, transpileCode, type HookContext, unifiedBridge, styleManager } from '@clevertree/relay-client-shared'
 import ErrorBoundary from './ErrorBoundary'
+import { MarkdownRenderer } from './MarkdownRenderer'
 import { FileRenderer } from './FileRenderer'
 import { TSDiv } from './TSDiv'
 
@@ -57,9 +58,21 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
 
         // No requireShim needed for web loader; WebModuleLoader executes code in a sandboxed Function
 
+        const rewriteBuiltins = (code: string) => {
+            // Replace bare @relay/* imports with globals to avoid browser bare-spec failures
+            const mkBuiltin = (spec: string, destructure: string) => `const ${destructure} = ((globalThis && globalThis.__relay_builtins && globalThis.__relay_builtins['${spec}']) || {});`
+            const markdownRe = /import\s+\{\s*MarkdownRenderer\s*\}\s+from\s+['"]@relay\/markdown['"];?/g
+            const themeRe = /import\s+\{\s*registerThemesFromYaml\s*\}\s+from\s+['"]@relay\/theme['"];?/g
+            const jsxRuntimeRe = /import\s+\{\s*jsx\s+as\s+(_jsx)\s*,\s*jsxs\s+as\s+(_jsxs)\s*,\s*Fragment\s+as\s+(_Fragment)\s*\}\s+from\s+['"]react\/jsx-runtime['"];?/g
+            let rewritten = code.replace(markdownRe, mkBuiltin('@relay/markdown', '{ MarkdownRenderer }'))
+            rewritten = rewritten.replace(themeRe, mkBuiltin('@relay/theme', '{ registerThemesFromYaml }'))
+            rewritten = rewritten.replace(jsxRuntimeRe, (_m, a, b, c) => `const ${a} = (globalThis.__hook_jsx_runtime?.jsx || globalThis.__jsx || (globalThis.__hook_react && globalThis.__hook_react.createElement) || (() => null)); const ${b} = (globalThis.__hook_jsx_runtime?.jsxs || globalThis.__jsxs || (globalThis.__hook_react && globalThis.__hook_react.createElement) || (() => null)); const ${c} = (globalThis.__hook_jsx_runtime?.Fragment || globalThis.__Fragment || (globalThis.__hook_react && globalThis.__hook_react.Fragment));`)
+            return rewritten
+        }
+
         const transpiler = async (code: string, filename: string) => {
             const out = await transpileCode(code, { filename })
-            return out
+            return rewriteBuiltins(out)
         }
 
         const webLoader = new WebModuleLoader()
@@ -81,6 +94,15 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
 
     const createHookContext = useCallback((baseHookPath: string): HookContext => {
         const buildPeer = (p: string) => `${normalizedHost}${p.startsWith('/') ? p : '/' + p}`
+
+        const resolveThemeUrl = (path: string) => {
+            if (path.startsWith('/')) {
+                return `${normalizedHost}${path}`
+            }
+            const base = (window as any).__currentModulePath || baseHookPath || '/'
+            const baseDir = base.includes('/') ? base.slice(0, base.lastIndexOf('/')) : ''
+            return new URL(path, `${normalizedHost}${baseDir}/`).href
+        }
 
         const FileRendererAdapter = ({ path }: { path: string }) => {
             const [content, setContent] = useState<string>('')
@@ -110,9 +132,37 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
             return <FileRenderer content={content} contentType={contentType} />
         }
 
-        const loadModule = async (modulePath: string) => {
+        const registerThemesFromYaml = async (path: string) => {
+            try {
+                const absolute = resolveThemeUrl(path)
+                await (unifiedBridge as any).loadThemesFromYamlUrl(absolute)
+                try { styleManager.renderCssIntoDom() } catch { /* ignore */ }
+            } catch (e) {
+                console.warn('[HookRenderer] registerThemesFromYaml failed:', e)
+            }
+        }
+
+        const builtinModules: Record<string, any> = {
+            '@relay/markdown': { MarkdownRenderer },
+            '@relay/theme': {
+                registerThemeStyles: (name: string, defs?: Record<string, any>) => {
+                    unifiedBridge.registerTheme(name, defs)
+                    try { styleManager.renderCssIntoDom() } catch (e) { }
+                },
+                registerThemesFromYaml,
+            },
+        }
+
+            // Expose built-ins globally so transpiled hooks can resolve bare imports safely
+            ; (window as any).__relay_builtins = builtinModules
+
+        const loadModule = async (modulePath: string, fromPathArg?: string) => {
+            if (builtinModules[modulePath]) return builtinModules[modulePath]
             if (!loaderRef.current) throw new Error('loader not ready')
-            return loaderRef.current.loadModule(modulePath, baseHookPath, createHookContext(baseHookPath))
+            // Prefer the current module path tracked by the loader if available,
+            // otherwise fall back to the base hook path.
+            const fromPath = fromPathArg || (window as any).__currentModulePath || baseHookPath
+            return loaderRef.current.loadModule(modulePath, fromPath, createHookContext(fromPath))
         }
 
         return {
@@ -120,16 +170,15 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
             createElement: createHookReact(React).createElement,
             FileRenderer: FileRendererAdapter,
             Layout: undefined,
-            params: {},
             helpers: {
-                navigate: () => { },
                 buildPeerUrl: buildPeer,
                 loadModule,
                 registerThemeStyles: (name: string, defs?: Record<string, any>) => {
                     unifiedBridge.registerTheme(name, defs)
                     // After registering a theme, re-render CSS into the DOM
                     try { styleManager.renderCssIntoDom() } catch (e) { }
-                }
+                },
+                registerThemesFromYaml,
             }
         }
     }, [normalizedHost])
@@ -147,7 +196,11 @@ const HookRenderer: React.FC<HookRendererProps> = ({ host, hookPath }) => {
             // After rendering the hook, ensure CSS for currently-registered usage is applied
             try { styleManager.renderCssIntoDom() } catch (e) { }
         } catch (e: any) {
-            setError(e?.message || String(e))
+            console.error('[HookRenderer] Error loading/executing hook:', e)
+            const message = e?.message || String(e)
+            const stack = e?.stack || ''
+            const fullError = stack ? `${message}\n\nStack Trace:\n${stack}` : message
+            setError(fullError)
         } finally {
             setLoading(false)
         }

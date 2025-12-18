@@ -1,4 +1,4 @@
-import themedStylerBridge from './themedStylerBridge'
+import themedStylerBridge, { loadThemesFromYamlUrl, loadThemesFromYamlText } from './themedStylerBridge'
 
 // Unified bridge that exposes both hook-transpiler transpile API and the themed-styler runtime bridge
 const unifiedBridge = {
@@ -26,6 +26,10 @@ const unifiedBridge = {
   getThemeList: themedStylerBridge.getThemeList,
   getCssForWeb: themedStylerBridge.getCssForWeb,
   getRnStyles: themedStylerBridge.getRnStyles,
+
+  // Theme YAML helpers
+  loadThemesFromYamlUrl,
+  loadThemesFromYamlText,
 }
 
 export default unifiedBridge

@@ -1,15 +1,15 @@
-import {useCallback, useEffect, useMemo, useState} from 'react'
-import {styleManager, unifiedBridge} from '@clevertree/relay-client-shared'
-import {useTranspilerSetting} from '../state/transpilerSettings'
-import type {ThemeName} from '../state/store'
-import {useAppState} from '../state/store'
-import {TSDiv} from './TSDiv'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { styleManager, unifiedBridge } from '@clevertree/relay-client-shared'
+import { useTranspilerSetting } from '../state/transpilerSettings'
+import type { ThemeName } from '../state/store'
+import { useAppState } from '../state/store'
+import { TSDiv } from './TSDiv'
 
 interface JsonBlockProps {
     value: unknown
 }
 
-function JsonBlock({value}: JsonBlockProps) {
+function JsonBlock({ value }: JsonBlockProps) {
     const text = useMemo(() => {
         try {
             return JSON.stringify(value, null, 2)
@@ -50,7 +50,7 @@ interface DebugPanelState {
 }
 
 export function SettingsTab() {
-    const {setting, setSetting} = useTranspilerSetting()
+    const { setting, setSetting } = useTranspilerSetting()
     const theme = useAppState((s) => s.theme)
     const setTheme = useAppState((s) => s.setTheme)
     const [themeList, setThemeList] = useState<ThemeListItem[]>([])
@@ -126,7 +126,7 @@ export function SettingsTab() {
                 cssPreview: preview,
             })
         } catch (e) {
-            setStylerStatus((prev) => ({...prev, cssPreview: `Error: ${e instanceof Error ? e.message : String(e)}`}))
+            setStylerStatus((prev) => ({ ...prev, cssPreview: `Error: ${e instanceof Error ? e.message : String(e)}` }))
         }
     }, [])
 
@@ -134,7 +134,7 @@ export function SettingsTab() {
     const refreshDebugPanel = useCallback(() => {
         setDebugPanel((prev) => {
             try {
-                const newState = {...prev}
+                const newState = { ...prev }
 
                 try {
                     newState.css = unifiedBridge.getCssForWeb()
@@ -145,7 +145,7 @@ export function SettingsTab() {
                 try {
                     newState.usage = unifiedBridge.getUsageSnapshot() as UsageSnapshot
                 } catch (e) {
-                    newState.usage = {error: String(e)}
+                    newState.usage = { error: String(e) }
                 }
 
                 try {
@@ -158,7 +158,7 @@ export function SettingsTab() {
                         try {
                             const usageSnapshot = unifiedBridge.getUsageSnapshot
                                 ? (unifiedBridge.getUsageSnapshot() as UsageSnapshot)
-                                : {selectors: [], classes: []}
+                                : { selectors: [], classes: [] }
                             const themesMap = themes.themes || {}
                             const current = themes.currentTheme ?? null
                             const defaultTheme = current || Object.keys(themesMap)[0] || null
@@ -173,11 +173,11 @@ export function SettingsTab() {
                                 used_classes: usageSnapshot.classes || [],
                             }
                         } catch (e) {
-                            newState.themedStylerFullState = {error: String(e)}
+                            newState.themedStylerFullState = { error: String(e) }
                         }
                     }
                 } catch (e) {
-                    newState.themesState = {error: String(e)}
+                    newState.themesState = { error: String(e) }
                 }
 
                 return newState
@@ -209,7 +209,7 @@ export function SettingsTab() {
     }, [refreshDebugPanel])
 
     useEffect(() => {
-        ;(async () => {
+        ; (async () => {
             try {
                 const shim = await import('/src/wasm/themed_styler.js')
                 const defaultInit = (shim as Record<string, unknown>).default
@@ -249,7 +249,7 @@ export function SettingsTab() {
             // lightweight throttle by requestAnimationFrame
             requestAnimationFrame(() => refreshClasses())
         })
-        obs.observe(document.body, {attributes: true, childList: true, subtree: true, attributeFilter: ['class']})
+        obs.observe(document.body, { attributes: true, childList: true, subtree: true, attributeFilter: ['class'] })
         return () => obs.disconnect()
     }, [])
 
@@ -324,7 +324,7 @@ export function SettingsTab() {
                 <TSDiv className="flex items-center justify-between rounded-lg border p-4">
                     <TSDiv>
                         <TSDiv tag="p"
-                               className="text-base font-medium">{isServer ? 'Server-side transpiler' : 'Client-side hook transpiler'}</TSDiv>
+                            className="text-base font-medium">{isServer ? 'Server-side transpiler' : 'Client-side hook transpiler'}</TSDiv>
                         <TSDiv tag="p" className="text-sm mt-1">{selectedDescription}</TSDiv>
                     </TSDiv>
                     <TSDiv tag="label" className="inline-flex items-center cursor-pointer select-none">
@@ -336,9 +336,9 @@ export function SettingsTab() {
                             onChange={(e) => setSetting(e.target.checked ? 'server-only' : 'client-only')}
                         />
                         <TSDiv
-                            className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600 transition-colors relative">
+                            className="w-12 h-6 peer-focus:outline-none rounded-full peer peer-checked:bg-blue-600 transition-colors relative">
                             <TSDiv
-                                className="absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-6"/>
+                                className="absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full shadow transform transition-transform peer-checked:translate-x-6" />
                         </TSDiv>
                         <TSDiv tag="span" className="ml-3 text-sm">Server</TSDiv>
                     </TSDiv>
@@ -374,7 +374,7 @@ export function SettingsTab() {
                     <TSDiv tag="ul" className="divide-y divide-[var(--border)]">
                         {filtered.map((c) => (
                             <TSDiv tag="li" key={c}
-                                   className="px-3 py-2 font-mono text-xs text-[var(--text)]">{c}</TSDiv>
+                                className="px-3 py-2 font-mono text-xs text-[var(--text)]">{c}</TSDiv>
                         ))}
                         {filtered.length === 0 && (
                             <TSDiv tag="li" className="px-3 py-2 text-sm">No classes match your search.</TSDiv>
@@ -416,7 +416,7 @@ export function SettingsTab() {
                     </TSDiv>
                     <TSDiv>
                         <TSDiv tag="div"
-                               className="text-xs font-mono text-[var(--text-code)] bg-[var(--bg-code)] rounded p-2 overflow-auto max-h-40">
+                            className="text-xs font-mono text-[var(--text-code)] bg-[var(--bg-code)] rounded p-2 overflow-auto max-h-40">
                             {stylerStatus.cssPreview || 'No CSS generated yet.'}
                         </TSDiv>
                     </TSDiv>
@@ -443,11 +443,11 @@ export function SettingsTab() {
                     <TSDiv className="font-semibold">Themed Styler — Debug</TSDiv>
                     <TSDiv className="space-x-2">
                         <TSDiv tag="button" onClick={refreshDebugPanel}
-                               className="px-2 py-1 bg-blue-500 text-white rounded text-xs">Refresh</TSDiv>
+                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs">Refresh</TSDiv>
                         <TSDiv tag="button" onClick={forceLoadFromManifest}
-                               className="px-2 py-1 bg-green-500 text-white rounded text-xs">Force manifest load</TSDiv>
+                            className="px-2 py-1 bg-green-500 text-white rounded text-xs">Force manifest load</TSDiv>
                         <TSDiv tag="button" onClick={copyCss}
-                               className="px-2 py-1 bg-[var(--bg-secondary)] rounded text-xs">Copy CSS</TSDiv>
+                            className="px-2 py-1 bg-[var(--bg-secondary)] rounded text-xs">Copy CSS</TSDiv>
                     </TSDiv>
                 </TSDiv>
 
@@ -456,14 +456,14 @@ export function SettingsTab() {
                         <TSDiv className="font-semibold mb-1">Generated CSS</TSDiv>
                         <TSDiv tag="pre">{debugPanel.css}</TSDiv>
                         <TSDiv className="font-semibold mt-3 mb-1">Themed-styler (full state)</TSDiv>
-                        <JsonBlock value={debugPanel.themedStylerFullState}/>
+                        <JsonBlock value={debugPanel.themedStylerFullState} />
                         <TSDiv className="font-semibold mb-1">Usage Snapshot</TSDiv>
-                        <JsonBlock value={debugPanel.usage}/>
+                        <JsonBlock value={debugPanel.usage} />
                         <TSDiv className="font-semibold mt-3 mb-1">Themed-styler (summary)</TSDiv>
-                        <JsonBlock value={debugPanel.themesState}/>
+                        <JsonBlock value={debugPanel.themesState} />
                         <TSDiv className="font-semibold mt-3 mb-1">Style Manager (raw)</TSDiv>
                         <JsonBlock
-                            value={styleManager && (styleManager as Record<string, unknown>).state ? (styleManager as Record<string, unknown>).state : {available: Boolean(styleManager)}}/>
+                            value={styleManager && (styleManager as Record<string, unknown>).state ? (styleManager as Record<string, unknown>).state : { available: Boolean(styleManager) }} />
                     </TSDiv>
                 </TSDiv>
             </TSDiv>

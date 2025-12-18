@@ -19,7 +19,7 @@
 
         (async () => {
             try {
-                // Import from src/wasm (not public/wasm)
+                // Import from src/wasm (not src/wasm)
                 const { default: init, transpile_jsx } = await import('/src/wasm/hook_transpiler.js');
                 
                 log('Module imported, initializing WASM...');

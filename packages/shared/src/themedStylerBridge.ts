@@ -85,7 +85,7 @@ export function getThemeList(): Array<{ key: string; name: string }> {
       console.warn('[themedStylerBridge] Failed to get theme list from WASM:', e)
     }
   }
-  
+
   // Fallback: use in-memory themes registry
   return Object.keys(themes).map((key) => ({
     key,
@@ -95,114 +95,111 @@ export function getThemeList(): Array<{ key: string; name: string }> {
 
 // Attempt to populate themes from theme.yaml file.
 let _defaults_loaded = false
+
+async function wasmInitIfAvailable() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null
+  try {
+    // @ts-ignore - web-only dynamic import
+    const shim = await import('/src/wasm/themed_styler.js')
+    if (!shim) return null
+    if (typeof (shim as Record<string, unknown>).default === 'function') {
+      try { await ((shim as Record<string, unknown>).default as () => Promise<void>)() } catch { /* already initialized */ }
+    }
+    return shim as Record<string, any>
+  } catch {
+    return null
+  }
+}
+
+export async function loadThemesFromYamlText(yamlText: string): Promise<void> {
+  try {
+    const themeConfig = parseYAML(yamlText) as Record<string, any>
+    if (!themeConfig || !themeConfig.themes) {
+      console.warn('[themedStylerBridge] No themes found in provided YAML')
+      return
+    }
+
+    const shim = await wasmInitIfAvailable()
+
+    if (shim && typeof shim.get_default_state_json === 'function' && typeof shim.register_theme_json === 'function') {
+      // Start from current in-memory themes to avoid wiping previously-registered themes
+      const buildInitialState = () => {
+        try {
+          const existing = getThemes()
+          const payload = {
+            themes: existing.themes || {},
+            default_theme: existing.currentTheme || Object.keys(existing.themes || {})[0] || '',
+            current_theme: existing.currentTheme || Object.keys(existing.themes || {})[0] || '',
+            variables: {},
+            breakpoints: {},
+            used_selectors: [],
+            used_classes: [],
+            used_tags: [],
+            used_tag_classes: [],
+          }
+          return JSON.stringify(payload)
+        } catch {
+          return String(shim.get_default_state_json())
+        }
+      }
+
+      let currentState = buildInitialState()
+      for (const [themeName, themeData] of Object.entries(themeConfig.themes || {})) {
+        try {
+          const payload = JSON.stringify({ name: themeName, theme: themeData })
+          currentState = String(shim.register_theme_json(currentState, payload))
+        } catch (e) {
+          console.warn(`[themedStylerBridge] Failed to register theme via WASM: ${themeName}`, e)
+        }
+      }
+      if (typeof shim.set_theme_json === 'function') {
+        const desired = themeConfig.default_theme || (getThemes().currentTheme || '')
+        if (desired) {
+          try { currentState = String(shim.set_theme_json(currentState, desired)) } catch { /* ignore */ }
+        }
+      }
+      try {
+        const parsed = JSON.parse(currentState || '{}')
+        if (parsed && parsed.themes) {
+          // Merge themes without clearing others; override same-name keys
+          for (const [k, v] of Object.entries(parsed.themes)) registerTheme(k, v as Record<string, unknown>)
+          if (parsed.current_theme) setCurrentTheme(parsed.current_theme as string)
+        }
+      } catch { /* ignore parse failure */ }
+      return
+    }
+
+    // Fallback: no WASM; register directly from YAML object (merge by name)
+    for (const [themeName, themeData] of Object.entries(themeConfig.themes || {})) {
+      registerTheme(themeName, themeData as Record<string, unknown>)
+    }
+    if (themeConfig.default_theme) setCurrentTheme(String(themeConfig.default_theme))
+  } catch (e) {
+    console.error('[themedStylerBridge] loadThemesFromYamlText failed:', e)
+  }
+}
+
+export async function loadThemesFromYamlUrl(url: string): Promise<void> {
+  try {
+    const resp = await fetch(url)
+    if (!resp.ok) {
+      console.warn('[themedStylerBridge] Failed to fetch YAML from URL:', url, resp.status)
+      return
+    }
+    const yamlText = await resp.text()
+    await loadThemesFromYamlText(yamlText)
+  } catch (e) {
+    console.error('[themedStylerBridge] loadThemesFromYamlUrl failed:', e)
+  }
+}
+
 export async function ensureDefaultsLoaded(): Promise<void> {
   if (_defaults_loaded) return
   _defaults_loaded = true
-
   console.log('[themedStylerBridge] Loading themes from YAML...')
-
   try {
-    // Fetch and parse the theme YAML file
-    const response = await fetch(new URL('./theme.yaml', import.meta.url).href)
-    if (!response.ok) {
-      console.warn('[themedStylerBridge] Failed to fetch theme.yaml:', response.statusText)
-      return
-    }
-    const yamlText = await response.text()
-    const themeConfig = parseYAML(yamlText) as Record<string, unknown>
-
-    if (!themeConfig || !themeConfig.themes) {
-      console.warn('[themedStylerBridge] No themes found in theme.yaml')
-      return
-    }
-
-    // Initialize WASM first (web only)
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      try {
-        // @ts-ignore - web-only dynamic import
-        const shim = await import('/src/wasm/themed_styler.js')
-        console.log('[themedStylerBridge] Loaded WASM shim')
-
-        if (typeof (shim as Record<string, unknown>).get_version === 'function') {
-          try {
-            const getVersion = (shim as Record<string, unknown>).get_version as () => unknown
-            const wasmVersion = String(getVersion())
-            console.log('[themedStylerBridge] WASM Cargo version:', wasmVersion)
-          } catch (e) {
-            console.warn('[themedStylerBridge] Could not get WASM version:', e)
-          }
-        }
-
-        // Initialize WASM
-        if (shim && typeof (shim as Record<string, unknown>).default === 'function') {
-          try {
-            console.log('[themedStylerBridge] Initializing WASM...')
-            const initFn = (shim as Record<string, unknown>).default as () => Promise<void>
-            await initFn()
-          } catch (e) {
-            console.log('[themedStylerBridge] WASM already initialized')
-          }
-        }
-
-        // Get initial empty state
-        let state: Record<string, unknown> = {}
-        if (typeof (shim as Record<string, unknown>).get_default_state_json === 'function') {
-          try {
-            const getStateFn = (shim as Record<string, unknown>).get_default_state_json as () => unknown
-            const stateJson = String(getStateFn())
-            state = JSON.parse(stateJson || '{}')
-          } catch (e) {
-            console.warn('[themedStylerBridge] Could not get initial state:', e)
-          }
-        }
-
-        // Register each theme from YAML using the new register_theme_json function
-        const registerThemeJsonFn = (shim as Record<string, unknown>).register_theme_json as ((state: string, payload: string) => string) | undefined
-        const setThemeJsonFn = (shim as Record<string, unknown>).set_theme_json as ((state: string, theme: string) => string) | undefined
-
-        if (typeof registerThemeJsonFn !== 'function') {
-          console.warn('[themedStylerBridge] register_theme_json not found in WASM')
-          return
-        }
-
-        let currentState = JSON.stringify(state)
-
-        for (const [themeName, themeData] of Object.entries((themeConfig.themes as Record<string, unknown>) || {})) {
-          try {
-            const themePayload = {
-              name: themeName,
-              theme: themeData,
-            }
-            currentState = String(registerThemeJsonFn(currentState, JSON.stringify(themePayload)))
-            console.log(`[themedStylerBridge] Registered theme: ${themeName}`)
-          } catch (e) {
-            console.error(`[themedStylerBridge] Failed to register theme "${themeName}":`, e)
-          }
-        }
-
-        // Set default theme
-        if (themeConfig.default_theme && typeof setThemeJsonFn === 'function') {
-          try {
-            currentState = String(setThemeJsonFn(currentState, themeConfig.default_theme as string))
-            console.log(`[themedStylerBridge] Set default theme: ${themeConfig.default_theme}`)
-          } catch (e) {
-            console.warn('[themedStylerBridge] Could not set default theme:', e)
-          }
-        }
-
-        // Parse and register with bridge
-        const parsedState = JSON.parse(currentState || '{}') as Record<string, unknown>
-        if (parsedState && parsedState.themes) {
-          console.log('[themedStylerBridge] Successfully loaded themes:', Object.keys(parsedState.themes as Record<string, unknown>))
-          for (const [k, v] of Object.entries(parsedState.themes as Record<string, unknown>)) {
-            registerTheme(k, v as Record<string, unknown>)
-          }
-          if (parsedState.current_theme) setCurrentTheme(parsedState.current_theme as string)
-        }
-      } catch (e) {
-        console.warn('[themedStylerBridge] WASM initialization skipped (likely React Native):', e)
-      }
-    }
+    const url = new URL('./theme.yaml', import.meta.url).href
+    await loadThemesFromYamlUrl(url)
   } catch (e) {
     console.error('[themedStylerBridge] ensureDefaultsLoaded failed:', e)
   }
@@ -263,4 +260,6 @@ export default {
   getThemeList,
   getCssForWeb,
   getRnStyles,
+  loadThemesFromYamlText,
+  loadThemesFromYamlUrl,
 }

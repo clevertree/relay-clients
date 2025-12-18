@@ -2,14 +2,49 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import wasm from 'vite-plugin-wasm'
 import path from 'path'
+import fs from 'fs'
+
+function template404Plugin() {
+  return {
+    name: 'template-404-middleware',
+    apply: 'serve',
+    configureServer(server: any) {
+      const publicDir: string = server.config.publicDir
+      const rootPublic = path.resolve(publicDir)
+      server.middlewares.use((req: any, res: any, next: any) => {
+        try {
+          const url = req.url as string || ''
+          if (!url.startsWith('/template/')) return next()
+          const u = new URL(url, 'http://dev.local')
+          const pathname = decodeURIComponent(u.pathname)
+          const filePath = path.resolve(path.join(publicDir, pathname))
+          if (!filePath.startsWith(rootPublic)) {
+            res.statusCode = 403
+            res.setHeader('content-type', 'text/plain')
+            return res.end('Forbidden')
+          }
+          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            return next()
+          }
+          res.statusCode = 404
+          res.setHeader('content-type', 'text/plain')
+          return res.end('Not Found')
+        } catch (_) {
+          return next()
+        }
+      })
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), wasm()],
+  plugins: [template404Plugin(), react(), wasm()],
   server: {
     // Serve /template folder as static assets
     middlewareMode: false,
   },
+  publicDir: 'public',
   optimizeDeps: {
     include: ['@swc/wasm-web', '@babel/standalone'],
   },
