@@ -42,12 +42,12 @@ export function TestTab() {
                     </TSDiv>
                 </form>
                 <TSDiv className="text-sm text-[var(--text-secondary)] mt-2">
-                    Testing against static template at /template{currentPath}
+                    Testing against static template at /{currentPath}
                 </TSDiv>
             </TSDiv>
             <TSDiv className="flex-1 overflow-hidden">
                 <HookRenderer
-                    host={`${window.location.protocol}//${window.location.host}/template`}
+                    host={`${window.location.protocol}//${window.location.host}`}
                     hookPath={currentPath}
                 />
             </TSDiv>

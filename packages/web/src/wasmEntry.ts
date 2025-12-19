@@ -1,9 +1,6 @@
 // Re-export shim for wasm-bindgen outputs so bundlers (Vite) can statically analyze imports.
 // This file should live inside client-web/src so import('/src/wasmEntry') is valid.
 
-export * as hook_transpiler from './wasm/relay_hook_transpiler.js'
-export * as themed_styler from './wasm/themed_styler.js'
-
 // Default helper: call default exports if available to initialize both modules.
 export async function initAllClientWasms(): Promise<void> {
   // hook-transpiler (using wasm-pack --target web output)
@@ -13,8 +10,24 @@ export async function initAllClientWasms(): Promise<void> {
     const hookMod = await import('./wasm/relay_hook_transpiler.js')
 
     // The default export is an async init function that accepts WASM input
-    // We can pass it a URL and it will fetch and instantiate
-    const hookWasmUrl = new URL('./wasm/relay_hook_transpiler_bg.wasm', import.meta.url).href
+    // Prefer bundler ?url (Vite), but fallback to plain file URL (esbuild loader=file)
+    let hookWasmUrl: string
+    try {
+      // @ts-ignore
+      const hookWasmUrlMod = await import('./wasm/relay_hook_transpiler_bg.wasm?url')
+      hookWasmUrl = String(hookWasmUrlMod && (hookWasmUrlMod as any).default ? (hookWasmUrlMod as any).default : hookWasmUrlMod)
+    } catch (_) {
+      try {
+        // @ts-ignore
+        const fallbackMod = await import('./wasm/relay_hook_transpiler_bg.wasm')
+        hookWasmUrl = String((fallbackMod as any).default || fallbackMod)
+      } catch (e2) {
+        // Last resort: resolve relative to module URL
+        hookWasmUrl = new URL('./wasm/relay_hook_transpiler_bg.wasm', import.meta.url).href
+      }
+    }
+    // Normalize to an absolute URL relative to this module so hashed assets resolve under /assets/
+    hookWasmUrl = new URL(hookWasmUrl, import.meta.url).href
     console.log('[wasmEntry] Loading WASM from:', hookWasmUrl)
 
     if (hookMod && typeof hookMod.default === 'function') {
@@ -35,20 +48,25 @@ export async function initAllClientWasms(): Promise<void> {
 
   // themed-styler
   try {
-    // Import the wrapper (for API exposure) but use the public manifest URL to initialize
-    // so we avoid bundler-resolved src/wasm conflicts.
+    // Import the wrapper (for API exposure) and resolve wasm URL via bundler or fallback
     // @ts-ignore
     const stylerMod = await import('./wasm/themed_styler.js')
     if (stylerMod) {
       let stylerWasmUrl: string | undefined
       try {
-        // Prefer bundler-resolved asset URL (Vite) which points into src/wasm
-        // and is the canonical location for wasm-bindgen outputs.
+        // Prefer bundler-resolved asset URL
         // @ts-ignore
         const mod = await import('./wasm/themed_styler_bg.wasm?url')
         stylerWasmUrl = String(mod && (mod as any).default ? (mod as any).default : mod)
       } catch (e) {
-        // bundler import failed; fall back to manifest (if present in src/wasm)
+        // bundler import failed; try plain file URL or manifest
+        try {
+          // @ts-ignore
+          const plain = await import('./wasm/themed_styler_bg.wasm')
+          stylerWasmUrl = String((plain as any).default || plain)
+        } catch (_) {
+          // fall back to manifest (if present in src/wasm)
+        }
         try {
           // @ts-ignore - import the manifest as JSON via bundler
           const m = await import('./wasm/themed_styler.manifest.json')
@@ -64,6 +82,9 @@ export async function initAllClientWasms(): Promise<void> {
         }
       }
       // Initialize the wasm by calling the wrapper's default init with the resolved URL
+      if (stylerWasmUrl) {
+        stylerWasmUrl = new URL(stylerWasmUrl, import.meta.url).href
+      }
       if (typeof (stylerMod as any).default === 'function') {
         try {
           if (stylerWasmUrl) await (stylerMod as any).default(stylerWasmUrl)

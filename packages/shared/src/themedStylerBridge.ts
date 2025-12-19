@@ -198,6 +198,18 @@ export async function ensureDefaultsLoaded(): Promise<void> {
   _defaults_loaded = true
   console.log('[themedStylerBridge] Loading themes from YAML...')
   try {
+    // Prefer bundler-resolved import (esbuild loader maps .yaml to text)
+    try {
+      // @ts-ignore
+      const mod = await import('./theme.yaml')
+      const yamlText = String((mod as any)?.default ?? mod)
+      if (yamlText && yamlText.length) {
+        await loadThemesFromYamlText(yamlText)
+        return
+      }
+    } catch (e) {
+      // fall through to fetch
+    }
     const url = new URL('./theme.yaml', import.meta.url).href
     await loadThemesFromYamlUrl(url)
   } catch (e) {

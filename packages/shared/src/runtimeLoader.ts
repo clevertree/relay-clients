@@ -134,7 +134,80 @@ export class WebModuleLoader implements ModuleLoader {
             // Ensure globals are available for module execution
             ; (window as any).__hook_react = context.React
           // Provide JSX runtime globals for transpiled output
-          const jsxFactory = (context.React && context.React.createElement) ? context.React.createElement.bind(context.React) : undefined
+          // Create a proper jsx() wrapper that handles the automatic JSX runtime signature
+          // jsx(type, config, maybeKey) - the third parameter is the key, not a child
+          const createJsxFactory = (React: any) => {
+            if (!React) return undefined
+            // Debug flag: enable verbose logging of jsx/jsxs calls when
+            // globalThis.__HOOK_DEBUG is truthy or localStorage hookDebug === '1'
+            const shouldLogJsx = (() => {
+              try {
+                const g: any = (globalThis as any)
+                return !!g.__HOOK_DEBUG || (typeof localStorage !== 'undefined' && localStorage.getItem('hookDebug') === '1')
+              } catch {
+                return false
+              }
+            })()
+            const elementType = (() => {
+              try {
+                if (React && typeof React.createElement === 'function') {
+                  const el = React.createElement('div', null)
+                  if (el && el.$$typeof) return el.$$typeof
+                }
+              } catch { }
+              return Symbol.for('react.element')
+            })()
+            const logJsx = (kind: string, type: any, key: any, props: any) => {
+              if (!shouldLogJsx) return
+              try {
+                const typeName = typeof type === 'string' ? type : (type && (type.displayName || type.name)) || 'anonymous'
+                const children = props ? props.children : undefined
+                const childType = Array.isArray(children) ? 'array' : (children === null ? 'null' : typeof children)
+                const childSummary = Array.isArray(children)
+                  ? `[${children.length} items]`
+                  : (children && typeof children === 'object')
+                    ? (children && children['$$typeof'] ? 'react.element' : 'object')
+                    : children
+                const keys = props ? Object.keys(props) : []
+                // Avoid logging huge arrays of children — keep it concise
+                console.debug(`[jsx/${kind}]`, { type: typeName, key, childType, childSummary, propsKeys: keys })
+              } catch {
+                // ignore log failures
+              }
+            }
+            return (type: any, config: any, maybeKey: any) => {
+              let key = null
+              let ref = null
+              let props: any = {}
+              
+              if (maybeKey !== undefined) {
+                key = String(maybeKey)
+              }
+              
+              // Filter out key and ref from props, keep everything else (including children)
+              if (config) {
+                for (let propName in config) {
+                  if (propName === 'key') {
+                    key = String(config.key)
+                  } else if (propName === 'ref') {
+                    ref = config.ref
+                  } else {
+                    props[propName] = config[propName]
+                  }
+                }
+              }
+
+              logJsx('prod', type, key, props)
+              return {
+                '$$typeof': elementType,
+                type,
+                key,
+                ref: ref || null,
+                props
+              }
+            }
+          }
+          const jsxFactory = createJsxFactory(context.React)
           const fragmentFactory = (context.React && (context.React.Fragment || (context.React as any).Fragment)) ? (context.React.Fragment || (context.React as any).Fragment) : undefined
             ; (window as any).__hook_jsx_runtime = { jsx: jsxFactory, jsxs: jsxFactory, Fragment: fragmentFactory }
             ; (window as any).__jsx = jsxFactory
@@ -221,9 +294,74 @@ try {
           }
           if (spec === 'react/jsx-runtime') {
             const r: any = context.React || (globalThis as any).__hook_react || (globalThis as any).React || {}
+            const shouldLogJsx = (() => {
+              try {
+                const g: any = (globalThis as any)
+                return !!g.__HOOK_DEBUG || (typeof localStorage !== 'undefined' && localStorage.getItem('hookDebug') === '1')
+              } catch {
+                return false
+              }
+            })()
+            const logJsx = (kind: string, type: any, key: any, props: any) => {
+              if (!shouldLogJsx) return
+              try {
+                const typeName = typeof type === 'string' ? type : (type && (type.displayName || type.name)) || 'anonymous'
+                const children = props ? props.children : undefined
+                const childType = Array.isArray(children) ? 'array' : (children === null ? 'null' : typeof children)
+                const childSummary = Array.isArray(children)
+                  ? `[${children.length} items]`
+                  : (children && typeof children === 'object')
+                    ? (children && children['$$typeof'] ? 'react.element' : 'object')
+                    : children
+                const keys = props ? Object.keys(props) : []
+                console.debug(`[jsx/${kind}]`, { type: typeName, key, childType, childSummary, propsKeys: keys })
+              } catch {
+                // ignore log failures
+              }
+            }
+            const jsxFactory = (type: any, config: any, maybeKey: any) => {
+              let key = null
+              let ref = null
+              let props: any = {}
+              const elementType = (() => {
+                try {
+                  if (r && typeof (r as any).createElement === 'function') {
+                    const el = (r as any).createElement('div', null)
+                    if (el && (el as any).$$typeof) return (el as any).$$typeof
+                  }
+                } catch { }
+                return Symbol.for('react.element')
+              })()
+              
+              if (maybeKey !== undefined) {
+                key = String(maybeKey)
+              }
+              
+              // Filter out key and ref from props, keep everything else (including children)
+              if (config) {
+                for (let propName in config) {
+                  if (propName === 'key') {
+                    key = String(config.key)
+                  } else if (propName === 'ref') {
+                    ref = config.ref
+                  } else {
+                    props[propName] = config[propName]
+                  }
+                }
+              }
+              
+              logJsx('shim', type, key, props)
+              return {
+                '$$typeof': elementType,
+                type,
+                key,
+                ref: ref || null,
+                props
+              }
+            }
             return {
-              jsx: r.createElement ? r.createElement.bind(r) : undefined,
-              jsxs: r.createElement ? r.createElement.bind(r) : undefined,
+              jsx: jsxFactory,
+              jsxs: jsxFactory,
               Fragment: r.Fragment,
             }
           }
@@ -236,14 +374,82 @@ try {
       )
 
       // Ensure JSX runtime globals exist for modules executed via Function path
-      const jsxFactory = context.React?.createElement ? context.React.createElement.bind(context.React) : undefined
+      const createJsxFactory2 = (React: any) => {
+        if (!React) return undefined
+        const shouldLogJsx = (() => {
+          try {
+            const g: any = (globalThis as any)
+            return !!g.__HOOK_DEBUG || (typeof localStorage !== 'undefined' && localStorage.getItem('hookDebug') === '1')
+          } catch {
+            return false
+          }
+        })()
+        const logJsx = (kind: string, type: any, key: any, props: any) => {
+          if (!shouldLogJsx) return
+          try {
+            const typeName = typeof type === 'string' ? type : (type && (type.displayName || type.name)) || 'anonymous'
+            const children = props ? props.children : undefined
+            const childType = Array.isArray(children) ? 'array' : (children === null ? 'null' : typeof children)
+            const childSummary = Array.isArray(children)
+              ? `[${children.length} items]`
+              : (children && typeof children === 'object')
+                ? (children && children['$$typeof'] ? 'react.element' : 'object')
+                : children
+            const keys = props ? Object.keys(props) : []
+            console.debug(`[jsx/func]`, { type: typeName, key, childType, childSummary, propsKeys: keys })
+          } catch {
+            // ignore log failures
+          }
+        }
+        const elementType = (() => {
+          try {
+            if (React && typeof React.createElement === 'function') {
+              const el = React.createElement('div', null)
+              if (el && el.$$typeof) return el.$$typeof
+            }
+          } catch { }
+          return Symbol.for('react.element')
+        })()
+        return (type: any, config: any, maybeKey: any) => {
+          let key = null
+          let ref = null
+          let props: any = {}
+          
+          if (maybeKey !== undefined) {
+            key = String(maybeKey)
+          }
+          
+          // Filter out key and ref from props, keep everything else (including children)
+          if (config) {
+            for (let propName in config) {
+              if (propName === 'key') {
+                key = String(config.key)
+              } else if (propName === 'ref') {
+                ref = config.ref
+              } else {
+                props[propName] = config[propName]
+              }
+            }
+          }
+          
+          logJsx('func', type, key, props)
+          return {
+            '$$typeof': elementType,
+            type,
+            key,
+            ref: ref || null,
+            props
+          }
+        }
+      }
+      const jsxFactory2 = createJsxFactory2(context.React)
       const fragmentFactory = context.React?.Fragment
       if (!(globalThis as any).__hook_jsx_runtime) {
-        ; (globalThis as any).__hook_jsx_runtime = { jsx: jsxFactory, jsxs: jsxFactory, Fragment: fragmentFactory }
+        ; (globalThis as any).__hook_jsx_runtime = { jsx: jsxFactory2, jsxs: jsxFactory2, Fragment: fragmentFactory }
       }
-      if (!(globalThis as any).__jsx && jsxFactory) {
-        ; (globalThis as any).__jsx = jsxFactory
-          ; (globalThis as any).__jsxs = jsxFactory
+      if (!(globalThis as any).__jsx && jsxFactory2) {
+        ; (globalThis as any).__jsx = jsxFactory2
+          ; (globalThis as any).__jsxs = jsxFactory2
       }
       if (!(globalThis as any).__Fragment && fragmentFactory) {
         ; (globalThis as any).__Fragment = fragmentFactory
