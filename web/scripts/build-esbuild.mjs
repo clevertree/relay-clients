@@ -41,13 +41,13 @@ function readEnvFile(envPath) {
 
 export async function bundle({ watch = false } = {}) {
   const envVars = readEnvFile(path.join(root, '.env'))
-  
+
   // Build define object for import.meta.env access
   const importMetaDefines = {}
   for (const [key, val] of Object.entries(envVars)) {
     importMetaDefines[`import.meta.env.${key}`] = JSON.stringify(val)
   }
-  
+
   const opts = {
     entryPoints: [path.join(srcDir, 'main.tsx')],
     outdir: assetsDir,
