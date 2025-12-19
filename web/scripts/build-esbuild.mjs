@@ -18,7 +18,36 @@ function ensureIndexHtml(jsFile, cssFile) {
   fs.writeFileSync(htmlPath, html)
 }
 
+// Read .env file and extract RELAY_PUBLIC_* and VITE_* variables
+function readEnvFile(envPath) {
+  const env = {}
+  if (fs.existsSync(envPath)) {
+    const content = fs.readFileSync(envPath, 'utf-8')
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eqIdx = trimmed.indexOf('=')
+      if (eqIdx === -1) continue
+      const key = trimmed.slice(0, eqIdx).trim()
+      const val = trimmed.slice(eqIdx + 1).trim()
+      // Expose RELAY_PUBLIC_* and VITE_* variables
+      if (key.startsWith('RELAY_PUBLIC_') || key.startsWith('VITE_')) {
+        env[key] = val.replace(/^["|']|["|']$/g, '')
+      }
+    }
+  }
+  return env
+}
+
 export async function bundle({ watch = false } = {}) {
+  const envVars = readEnvFile(path.join(root, '.env'))
+  
+  // Build define object for import.meta.env access
+  const importMetaDefines = {}
+  for (const [key, val] of Object.entries(envVars)) {
+    importMetaDefines[`import.meta.env.${key}`] = JSON.stringify(val)
+  }
+  
   const opts = {
     entryPoints: [path.join(srcDir, 'main.tsx')],
     outdir: assetsDir,
@@ -42,6 +71,7 @@ export async function bundle({ watch = false } = {}) {
     define: {
       'process.env.NODE_ENV': '\"development\"',
       '__DEV__': 'true',
+      ...importMetaDefines,
     },
     plugins: [
       // Resolve absolute `/src/...` imports (used by shared wasmLoader shim) to this package's src directory

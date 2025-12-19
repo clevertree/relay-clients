@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
-import {type PeerInfo, useAppState} from '../state/store'
+import {type PeerInfo, STORAGE_KEY_PEERS, useAppState} from '../state/store'
 import {fullProbePeer} from '../services/probing'
 import {TSDiv} from './TSDiv'
 
@@ -171,7 +171,7 @@ export function PeersView({onPeerPress}: PeersViewProps) {
                 {peers.length === 0 ? (
                     <TSDiv className="flex items-center justify-center h-full p-8 text-center">
                         <TSDiv tag="p" className="m-0">No peers configured. Add one using the form above or set
-                            RELAY_PEERS
+                            RELAY_PUBLIC_MASTER_PEER_LIST
                             environment variable.</TSDiv>
                     </TSDiv>
                 ) : (
@@ -254,7 +254,7 @@ async function getPeersFromEnvironment(): Promise<string[]> {
 
     // Check localStorage first (user-customized peer list)
     try {
-        const stored = localStorage.getItem('relay_peers')
+        const stored = localStorage.getItem(STORAGE_KEY_PEERS)
         if (stored) {
             const peers = JSON.parse(stored) as string[]
             if (Array.isArray(peers) && peers.length > 0) {
@@ -268,47 +268,9 @@ async function getPeersFromEnvironment(): Promise<string[]> {
         console.log('[getPeersFromEnvironment] Failed to load from localStorage:', e)
     }
 
-    // Check URL params
-    const params = new URLSearchParams(window.location.search)
-    const urlPeers = params.get('peers')
-    if (urlPeers) {
-        console.log('[getPeersFromEnvironment] Loaded from URL params:', urlPeers)
-        return urlPeers.split(';').map((p: string) => p.trim()).filter((p: string) => p.length > 0)
-    }
-
-    // Try to fetch config from Relay server first (runtime configuration)
-    // This will use the RELAY_MASTER_PEER_LIST environment variable from the server
-    try {
-        console.log('[getPeersFromEnvironment] Trying to fetch /api/config from server...')
-        // Try both HTTP and HTTPS to handle different deployment scenarios
-        let response: Response | null = null
-        const baseUrl = window.location.origin
-
-        try {
-            response = await fetch(`${baseUrl}/api/config`, {signal: AbortSignal.timeout(3000)})
-        } catch (e) {
-            console.log('[getPeersFromEnvironment] Failed to fetch from', `${baseUrl}/api/config`, e)
-            // If we're on HTTPS, try HTTP fallback
-            if (baseUrl.startsWith('https')) {
-                const httpUrl = baseUrl.replace('https://', 'http://')
-                response = await fetch(`${httpUrl}/api/config`, {signal: AbortSignal.timeout(3000)})
-            }
-        }
-
-        if (response && response.ok) {
-            const config = await response.json()
-            if (config.peers && Array.isArray(config.peers) && config.peers.length > 0) {
-                console.log('[getPeersFromEnvironment] Loaded from server config:', config.peers)
-                return config.peers
-            }
-        }
-    } catch (error) {
-        console.log('[getPeersFromEnvironment] Failed to fetch server config:', error)
-    }
-
     // Check Vite environment variables (only available after full rebuild with .env)
-    const envPeers = import.meta.env.VITE_RELAY_MASTER_PEER_LIST
-    console.log('[getPeersFromEnvironment] VITE_RELAY_MASTER_PEER_LIST:', envPeers)
+    const envPeers = import.meta.env.RELAY_PUBLIC_MASTER_PEER_LIST || "https://node-dfw1.relaynet.online;https://node-dfw2.relaynet.online"
+    console.log('[getPeersFromEnvironment] RELAY_PUBLIC_MASTER_PEER_LIST:', envPeers)
     if (envPeers) {
         const peers = envPeers.split(';').map((p: string) => p.trim()).filter((p: string) => p.length > 0)
         console.log('[getPeersFromEnvironment] Loaded from build-time env:', peers)
@@ -325,9 +287,9 @@ async function getPeersFromEnvironment(): Promise<string[]> {
     }
 
     // Try to get from global config (would be set by server)
-    if ((window as any).RELAY_PEERS) {
-        console.log('[getPeersFromEnvironment] Loaded from window.RELAY_PEERS:', (window as any).RELAY_PEERS)
-        return (window as any).RELAY_PEERS.split(',').map((p: string) => p.trim())
+    if ((window as any).RELAY_PUBLIC_MASTER_PEER_LIST) {
+        console.log('[getPeersFromEnvironment] Loaded from window.RELAY_PUBLIC_MASTER_PEER_LIST:', (window as any).RELAY_PUBLIC_MASTER_PEER_LIST)
+        return (window as any).RELAY_PUBLIC_MASTER_PEER_LIST.split(',').map((p: string) => p.trim())
     }
 
     // Fallback: try localhost

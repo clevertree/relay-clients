@@ -2,14 +2,15 @@
 
 This is the React Native client for Relay. It targets Android and iOS first, with optional desktop later.
 
-Status: Debug and Settings tabs are merged. The Debug tab contains a single "Client Transpiler Test". Transpiler mode toggle (Client/Server) is available.
+Status: Debug and Settings tabs are merged. The Debug tab contains a single "Client Transpiler Test". Transpiler mode
+toggle (Client/Server) is available.
 
 Quick start
 
 1. Install dependencies at the repo root (Node.js >= 20, Android SDK/adb for Android builds).
 2. From repo root, start Metro and run Android:
-   - `npm run rn:start` — start Metro
-   - `npm run rn:android` — run on Android (debug)
+    - `npm run rn:start` — start Metro
+    - `npm run rn:android` — run on Android (debug)
 
 Transpiler Modes
 
@@ -35,11 +36,14 @@ cd apps/client-react-native/android
 ./gradlew installRelease
 ```
 
-If installation fails due to signing, configure signing in `apps/client-react-native/android/app/build.gradle` and re-run the install command.
+If installation fails due to signing, configure signing in `apps/client-react-native/android/app/build.gradle` and
+re-run the install command.
 
 Environment
 
-Master peer list can be provided via a global `RN$RELAY_MASTER_PEER_LIST` (semicolon-separated URLs, e.g., `http://10.0.2.2:8080;https://node.example.com`). Defaults are emulator-localhost for Android (`http://10.0.2.2:8080`) and `http://localhost:8080` for iOS.
+Master peer list can be provided via a global `RN$RELAY_PUBLIC_MASTER_PEER_LIST` (semicolon-separated URLs, e.g.,
+`http://10.0.2.2:8080;https://node.example.com`). Defaults are emulator-localhost for Android (`http://10.0.2.2:8080`)
+and `http://localhost:8080` for iOS.
 
 See also
 

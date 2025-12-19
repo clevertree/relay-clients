@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+import {create} from 'zustand'
 
 export type PeerProtocol = 'https' | 'git' | 'ssh' | 'ipfs-api' | 'ipfs-gateway' | 'ipfs-swarm'
 
@@ -70,10 +70,10 @@ function generateTabId(): string {
 }
 
 // Storage keys
-const STORAGE_KEY_TABS = 'relay_tabs'
-const STORAGE_KEY_ACTIVE_TAB = 'relay_active_tab'
-const STORAGE_KEY_PEERS = 'relay_peers'
-const STORAGE_KEY_THEME = 'relay_theme'
+export const STORAGE_KEY_TABS = 'relay_tabs'
+export const STORAGE_KEY_ACTIVE_TAB = 'relay_active_tab'
+export const STORAGE_KEY_PEERS = 'relay_peers'
+export const STORAGE_KEY_THEME = 'relay_theme'
 
 // Load persisted state from localStorage
 function ensureCoreTabs(tabs: TabInfo[]): TabInfo[] {
@@ -83,13 +83,13 @@ function ensureCoreTabs(tabs: TabInfo[]): TabInfo[] {
     const hasTest = tabs.some((t) => t.id === 'test')
     const result = [...tabs]
     if (!hasHome) {
-        result.unshift({ id: 'home', title: 'Home', isHome: true })
+        result.unshift({id: 'home', title: 'Home', isHome: true})
     }
     if (!hasSettings) {
-        result.push({ id: 'settings', title: 'Settings' })
+        result.push({id: 'settings', title: 'Settings'})
     }
     if (!hasTest) {
-        result.push({ id: 'test', title: 'Test' })
+        result.push({id: 'test', title: 'Test'})
     }
     return result
 }
@@ -181,7 +181,7 @@ export const useAppState = create<AppState>((set, get) => ({
     peers: [],
     setPeers: (hosts) =>
         set(() => {
-            const newPeers = hosts.map((h) => ({ host: h, probes: [] }))
+            const newPeers = hosts.map((h) => ({host: h, probes: []}))
             persistPeers(newPeers)
             return {
                 peers: newPeers,
@@ -193,7 +193,7 @@ export const useAppState = create<AppState>((set, get) => ({
         })),
     setPeerProbing: (host, isProbing) =>
         set((s) => ({
-            peers: s.peers.map((p) => (p.host === host ? { ...p, isProbing } : p)),
+            peers: s.peers.map((p) => (p.host === host ? {...p, isProbing} : p)),
         })),
     addPeer: (host) =>
         set((s) => {
@@ -204,7 +204,7 @@ export const useAppState = create<AppState>((set, get) => ({
             if (s.peers.some((p) => p.host === cleanHost)) {
                 return s
             }
-            const newPeers = [...s.peers, { host: cleanHost, probes: [] }]
+            const newPeers = [...s.peers, {host: cleanHost, probes: []}]
             persistPeers(newPeers)
             return {
                 peers: newPeers,
@@ -226,7 +226,7 @@ export const useAppState = create<AppState>((set, get) => ({
     openTab: (host, path = '/') => {
         const existingTab = get().tabs.find((t) => t.host === host && t.path === path)
         if (existingTab) {
-            set({ activeTabId: existingTab.id })
+            set({activeTabId: existingTab.id})
             persistTabs(get().tabs, existingTab.id)
             return existingTab.id
         }
@@ -255,10 +255,10 @@ export const useAppState = create<AppState>((set, get) => ({
             const tabs = s.tabs.filter((t) => t.id !== tabId)
             const activeTabId = s.activeTabId === tabId ? (tabs.find((t) => t.id === 'home') ?? tabs[0])?.id || 'home' : s.activeTabId
             persistTabs(tabs, activeTabId || 'home')
-            return { tabs, activeTabId }
+            return {tabs, activeTabId}
         }),
     setActiveTab: (tabId) => {
-        set({ activeTabId: tabId })
+        set({activeTabId: tabId})
         persistTabs(get().tabs, tabId)
     },
     updateTab: (tabId, updater) =>
@@ -274,9 +274,9 @@ export const useAppState = create<AppState>((set, get) => ({
     theme: loadPersistedTheme(),
     setTheme: (theme) => {
         persistTheme(theme)
-        set({ theme })
+        set({theme})
         // Apply theme via unifiedBridge
-        import('@clevertree/relay-client-shared').then(({ unifiedBridge }) => {
+        import('@clevertree/relay-client-shared').then(({unifiedBridge}) => {
             if (unifiedBridge.setCurrentTheme) {
                 unifiedBridge.setCurrentTheme(theme)
             }
@@ -286,8 +286,8 @@ export const useAppState = create<AppState>((set, get) => ({
     // Auto-refresh state
     autoRefreshEnabled: false,
     setAutoRefresh: (enabled) =>
-        set({ autoRefreshEnabled: enabled }),
+        set({autoRefreshEnabled: enabled}),
     lastRefreshTs: 0,
     setLastRefreshTs: (ts) =>
-        set({ lastRefreshTs: ts }),
+        set({lastRefreshTs: ts}),
 }))
