@@ -8,9 +8,12 @@ const srcDir = path.join(root, 'src')
 const outDir = path.join(root, 'dist')
 const assetsDir = path.join(outDir, 'assets')
 
-function ensureIndexHtml(jsFile) {
+function ensureIndexHtml(jsFile, cssFile) {
   const htmlPath = path.join(outDir, 'index.html')
-  const html = `<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <link rel="icon" type="image/png" href="/icon.png" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>client-web (esbuild)</title>\n    <script type="module" crossorigin src="/assets/${jsFile}"></script>\n  </head>\n  <body>\n    <div id="root"></div>\n  </body>\n</html>`
+  const cssTag = cssFile && fs.existsSync(path.join(assetsDir, cssFile))
+    ? `    <link rel="stylesheet" href="/assets/${cssFile}" />\n`
+    : ''
+  const html = `<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <link rel="icon" type="image/png" href="/icon.png" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>client-web (esbuild)</title>\n${cssTag}    <script type="module" crossorigin src="/assets/${jsFile}"></script>\n  </head>\n  <body>\n    <div id="root"></div>\n  </body>\n</html>`
   fs.mkdirSync(outDir, { recursive: true })
   fs.writeFileSync(htmlPath, html)
 }
@@ -77,8 +80,8 @@ export async function bundle({ watch = false } = {}) {
     const ctx = await context(opts)
     await ctx.watch()
   }
-  // Always reference the stable entry name
-  ensureIndexHtml('main.js')
+  // Always reference the stable entry name (and the generated CSS bundle if present)
+  ensureIndexHtml('main.js', 'main.css')
   return { jsFile: 'main.js' }
 }
 
