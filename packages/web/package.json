@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bash watch-dev.sh",
     "build": "vite build",
     "build:debug": "VITE_NODE_ENV=development VITE_SOURCEMAP=true vite build",
     "lint": "eslint .",

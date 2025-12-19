@@ -1,33 +1,33 @@
 // Re-export shim for wasm-bindgen outputs so bundlers (Vite) can statically analyze imports.
 // This file should live inside client-web/src so import('/src/wasmEntry') is valid.
 
-export * as hook_transpiler from './wasm/hook_transpiler.js'
+export * as hook_transpiler from './wasm/relay_hook_transpiler.js'
 export * as themed_styler from './wasm/themed_styler.js'
 
 // Default helper: call default exports if available to initialize both modules.
 export async function initAllClientWasms(): Promise<void> {
-  // hook-transpiler
+  // hook-transpiler (using wasm-pack --target web output)
   try {
-    // Import the JS glue and the wasm file URL separately so Vite doesn't need native wasm ESM support.
-    // The wasm-bindgen bundler output exposes a default init function that accepts a URL/input.
+    // Import the wasm-pack generated module
     // @ts-ignore
-    const hookMod = await import('./wasm/hook_transpiler.js')
-    // import wasm as url so Vite treats it as an asset URL
-    // @ts-ignore
-    const { default: hookWasmUrl } = await import('./wasm/hook_transpiler_bg.wasm?url')
+    const hookMod = await import('./wasm/relay_hook_transpiler.js')
+
+    // The default export is an async init function that accepts WASM input
+    // We can pass it a URL and it will fetch and instantiate
+    const hookWasmUrl = new URL('./wasm/relay_hook_transpiler_bg.wasm', import.meta.url).href
     console.log('[wasmEntry] Loading WASM from:', hookWasmUrl)
+
     if (hookMod && typeof hookMod.default === 'function') {
-      try {
-        await (hookMod as any).default(hookWasmUrl)
-      } catch (e) {
-        // some builds may already auto-init; ignore
-      }
-      if (typeof (hookMod as any).transpile_jsx === 'function') {
-        ; (globalThis as any).__hook_transpile_jsx = (hookMod as any).transpile_jsx.bind(hookMod)
-        const version = (typeof (hookMod as any).get_version === 'function') ? (hookMod as any).get_version() : 'unknown'
-          ; (globalThis as any).__hook_transpiler_version = version
-        console.log('[wasmEntry] hook-transpiler loaded, version:', version)
-      }
+      await hookMod.default(hookWasmUrl)
+      console.log('[wasmEntry] Hook transpiler initialized')
+    }
+
+    // Set up global hooks
+    if (typeof hookMod.transpile_jsx === 'function') {
+      globalThis.__hook_transpile_jsx = hookMod.transpile_jsx
+      const version = (typeof hookMod.get_version === 'function') ? hookMod.get_version() : 'unknown'
+      globalThis.__hook_transpiler_version = version
+      console.log('[wasmEntry] hook-transpiler loaded, version:', version)
     }
   } catch (e) {
     console.warn('[wasmEntry] hook init failed', e)

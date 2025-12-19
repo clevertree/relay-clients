@@ -74,16 +74,17 @@ export interface ModuleLoader {
    * @param code The module source code
    * @param filename Path to the module for source maps
    * @param context The hook context to make available to the module
+   * @param fetchUrl Optional: The actual URL where the module was fetched from (for @relay/meta)
    * @returns Resolved module exports
    */
-  executeModule(code: string, filename: string, context: HookContext): Promise<any>
+  executeModule(code: string, filename: string, context: HookContext, fetchUrl?: string): Promise<any>
 }
 
 /**
  * Web-specific module loader: uses Function constructor for Metro compatibility
  */
 export class WebModuleLoader implements ModuleLoader {
-  async executeModule(code: string, filename: string, context: HookContext): Promise<any> {
+  async executeModule(code: string, filename: string, context: HookContext, fetchUrl?: string): Promise<any> {
     // Note: preamble is now added BEFORE transpilation in transpileCode(),
     // so we no longer need to add it again here
 
@@ -122,9 +123,14 @@ export class WebModuleLoader implements ModuleLoader {
       if (looksLikeESM) {
         try {
           // Transpiler has already rewritten special imports (react, @relay/*, etc.) to use globals
+          // Store module metadata in globalThis for @relay/meta import (ES6 compliant)
+          const dirname = filename.substring(0, filename.lastIndexOf('/') || 0)
+          // Use fetchUrl if provided (actual fetch location), otherwise construct from filename
+          const url = fetchUrl || `${(globalThis as any).location?.origin || 'http://localhost'}${filename}`
+            ; (globalThis as any).__relay_meta = { filename, dirname, url }
           // Just inject the per-module alias and execute
           const blob = new Blob([perModuleAlias, code], { type: 'text/javascript' })
-          const url = URL.createObjectURL(blob)
+          const blobUrl = URL.createObjectURL(blob)
             // Ensure globals are available for module execution
             ; (window as any).__hook_react = context.React
           // Provide JSX runtime globals for transpiled output
@@ -141,7 +147,8 @@ export class WebModuleLoader implements ModuleLoader {
             hasJsxRuntime: !!(window as any).__hook_jsx_runtime,
             hasFileRenderer: !!(window as any).__hook_file_renderer,
             hasHelpers: !!(window as any).__hook_helpers,
-            filename
+            filename,
+            fetchUrl
           })
           // Small delay to ensure globals are set before blob execution
           await new Promise(resolve => setTimeout(resolve, 0))
@@ -154,9 +161,9 @@ export class WebModuleLoader implements ModuleLoader {
             // Track current module path for nested lazy loads
             ; (window as any).__currentModulePath = filename
           const dynImport = new Function('u', 'return import(u)')
-          const ns = await dynImport(url)
+          const ns = await dynImport(blobUrl)
           // Clean up blob URL
-          setTimeout(() => URL.revokeObjectURL(url), 1000)
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
           // If module has default export, normalize to CommonJS-like shape
           const normalized = ns && ns.default ? { ...ns, default: ns.default } : ns
           // Return module-like object
@@ -208,6 +215,9 @@ try {
           }
           if (spec === '@relay/theme') {
             return (context as any).__relay_builtins?.['@relay/theme'] || (globalThis as any).__relay_builtins?.['@relay/theme'] || {}
+          }
+          if (spec === '@relay/meta') {
+            return (globalThis as any).__relay_meta || { filename: '', dirname: '', url: '' }
           }
           if (spec === 'react/jsx-runtime') {
             const r: any = context.React || (globalThis as any).__hook_react || (globalThis as any).React || {}
@@ -303,7 +313,7 @@ export class RNModuleLoader implements ModuleLoader {
     this.importHandler = importHandler
   }
 
-  async executeModule(code: string, filename: string, context: HookContext): Promise<any> {
+  async executeModule(code: string, filename: string, context: HookContext, fetchUrl?: string): Promise<any> {
     const exports: any = {}
     const module = { exports }
 
@@ -416,8 +426,6 @@ export async function transpileCode(
   // Only use the new Rust crate WASM binding if available on the page.
   // The web app must load the crate and expose globalThis.__hook_transpile_jsx(source, filename) => string
 
-  console.log('[transpileCode] *** TRANSPILE CODE CALLED ***', { filename: options.filename || 'module.tsx', codeLength: code.length })
-
   const filename = options.filename || 'module.tsx'
   const g: any = (typeof globalThis !== 'undefined' ? (globalThis as any) : {})
   const wasmTranspile: any = g.__hook_transpile_jsx
@@ -492,8 +500,6 @@ export async function transpileCode(
   if (pragmaFragMatch && pragmaFragMatch[1]) pragmaFragFn = pragmaFragMatch[1]
   const preamble = ``
   const codeWithPreamble = preamble + code
-
-  console.log('[transpileCode] Calling WASM transpiler for', filename, '(' + codeWithPreamble.length + ' bytes)')
 
   // DEBUG: Check if function is actually callable
   let out: any;
@@ -583,21 +589,7 @@ export async function transpileCode(
     throw new Error(`HookTranspiler returned unexpected type: ${typeof out}`)
   }
 
-  console.log('[transpileCode] WASM transpilation returned', transpiledCode.length, 'bytes')
-
-  // Log first 200 chars to see if transpilation happened
-  const sample = transpiledCode.substring(0, 200);
-  console.log('[transpileCode] Output sample:', sample)
-
-  // IMPORTANT: Log larger sample for debugging
-  const largeSample = transpiledCode.substring(0, 1500);
-  if (!largeSample.includes('TranspileError') && !largeSample.includes('<')) {
-    console.log('[transpileCode] First 1500 chars (transpilation successful):', largeSample);
-  } else if (largeSample.includes('<')) {
-    console.warn('[transpileCode] WARNING: First 1500 chars STILL CONTAINS JSX:', largeSample.substring(0, 800));
-  }
-
-  // Check if WASM returned a transpilation error
+  // Store for debugging if needed
   if (transpiledCode.startsWith('TranspileError:')) {
     const errorMsg = `${transpiledCode} (v${version})`
     console.error('[transpileCode] JSX transpilation failed:', {
@@ -821,7 +813,7 @@ export class HookLoader {
       // Execute and cache
       let mod: any
       try {
-        mod = await this.moduleLoader.executeModule(finalCode, normalizedPath, context)
+        mod = await this.moduleLoader.executeModule(finalCode, normalizedPath, context, moduleUrl)
       } catch (execErr) {
         const execMsg = (execErr as any)?.message || String(execErr)
         const syntaxMatch = execMsg.match(/Unexpected token|missing \)|SyntaxError/)
@@ -933,7 +925,8 @@ export class HookLoader {
       console.debug(`[HookLoader] Executing hook module`)
 
       try {
-        const mod = await this.moduleLoader.executeModule(finalCode, hookPath, context)
+        // Pass the actual fetch URL for @relay/meta injection, not the logical path
+        const mod = await this.moduleLoader.executeModule(finalCode, hookPath, context, hookUrl)
 
         if (!mod || typeof mod.default !== 'function') {
           throw new Error('Hook module does not export a default function')
